@@ -11,7 +11,6 @@ use axum::{
     extract::State,
     body::to_bytes,
 };
-use tower::ServiceExt;
 
 // Shared state for handlers
 #[derive(Clone)]
@@ -48,9 +47,12 @@ async fn main() -> Result<()> {
     let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
         .map_err(|e| anyhow::anyhow!("Failed to initialize tokenizer: {}", e))?;
 
+    // Keep tokenizer reference for CLI use
+    let tokenizer_ref = tokenizer.clone();
+    
     let state = AppState {
         token: token.clone(),
-        tokenizer: tokenizer.clone(),
+        tokenizer,
     };
 
     // Set up Axum router
@@ -61,15 +63,14 @@ async fn main() -> Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     println!("Starting server on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
 
-    // CLI interaction
+    // Handle CLI interaction before starting server
     if let Some(arg) = env::args().nth(1) {
         if arg == "talk" {
             println!("Enter your message:");
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
-            match handle_talk(&state.tokenizer, input).await {
+            match handle_talk(&tokenizer_ref, input).await {
                 Ok(tokens) => println!("Tokens: {:?}", tokens),
                 Err(e) => eprintln!("Error: {}", e),
             }
