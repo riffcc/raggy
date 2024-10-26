@@ -33,6 +33,20 @@ async fn main() -> Result<()> {
         Err(e) => eprintln!("Failed to create blob: {}", e),
     }
 
+    #[tokio::test]
+    async fn test_root_doc_creation() -> Result<()> {
+        let node = iroh::node::Node::memory()
+            .enable_docs()
+            .spawn()
+            .await?;
+
+        // Create a RootDoc
+        let root_doc = node.docs().create().await?;
+        assert!(!root_doc.id().to_string().is_empty());
+
+        Ok(())
+    }
+
     Ok(())
 }
 
