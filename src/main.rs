@@ -5,6 +5,14 @@ use config::{Config, File};
 use tokenizers::Tokenizer;
 use iroh::client::blobs::BlobStatus;
 
+pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
+    let tokenizer = Tokenizer::from_file("bert-base-uncased.json")
+        .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
+    let encoding = tokenizer.encode(input, true)
+        .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
+    Ok(encoding.get_ids().to_vec())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load configuration
@@ -12,14 +20,6 @@ async fn main() -> Result<()> {
     settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
     let token: String = settings.get("token").unwrap_or_default();
 
-    // Function to handle "talk" command
-    pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
-        let tokenizer = Tokenizer::from_file("bert-base-uncased.json")
-            .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
-        let encoding = tokenizer.encode(input, true)
-            .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
-        Ok(encoding.get_ids().to_vec())
-    }
     let _auth_header = format!("Bearer {}", token);
     let api = warp::path("talk")
         .and(warp::body::json())
