@@ -1,5 +1,4 @@
 use anyhow::Result;
-use iroh::hashing::Hash;
 use iroh::client::blobs::BlobStatus;
 
 #[tokio::main]
@@ -82,8 +81,9 @@ mod tests {
         assert_eq!(blob, content);
 
         // Test retrieval of non-existent blob
-        let invalid_hash = Hash::from([0u8; 32]); // Example invalid hash
-        assert!(node.blobs().read_to_bytes(invalid_hash).await.is_err());
+        // Example invalid hash
+        let invalid_hash = [0u8; 32];
+        assert!(node.blobs().read_to_bytes(invalid_hash.into()).await.is_err());
 
         Ok(())
     }
