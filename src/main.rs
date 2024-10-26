@@ -21,10 +21,15 @@ async fn main() -> Result<()> {
     // Create a blob
     let content = Vec::from("Hello, Iroh!");
     match node.blobs().add_bytes(content.clone()).await {
-        Ok(res) => match res.status {
-            BlobStatus::Complete => println!("Blob is complete"),
-            BlobStatus::Incomplete => println!("Blob is incomplete"),
-            BlobStatus::NotFound => println!("Blob not found"),
+        Ok(res) => {
+            println!("Created blob with hash: {:?}", res.hash);
+            // Assuming you want to check the status of the blob after creation
+            let status = node.blobs().status(res.hash).await?;
+            match status {
+                BlobStatus::Complete => println!("Blob is complete"),
+                BlobStatus::Incomplete => println!("Blob is incomplete"),
+                BlobStatus::NotFound => println!("Blob not found"),
+            }
         },
         Err(e) => eprintln!("Failed to create blob: {}", e),
     }
@@ -35,7 +40,6 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iroh::baomap::Hash; // Corrected import
 
     #[tokio::test]
     async fn test_node_creation() -> Result<()> {
@@ -69,7 +73,9 @@ mod tests {
         // Test blob creation
         let content = Vec::from("Hello, Iroh!");
         let res = node.blobs().add_bytes(content.clone()).await?;
-        assert_eq!(res.status, BlobStatus::Complete);
+        // Assuming you want to check the status of the blob after creation
+        let status = node.blobs().status(res.hash).await?;
+        assert_eq!(status, BlobStatus::Complete);
 
         // Test blob retrieval
         let blob = node.blobs().read_to_bytes(res.hash).await?;
