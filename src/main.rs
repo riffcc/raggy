@@ -198,7 +198,7 @@ mod tests {
                 .reply(&api)
                 .await
         });
-        let response = handle.await??;
+        let response = handle.await.map_err(|e| anyhow::anyhow!("Failed to join task: {:?}", e))??;
 
         assert_eq!(response.status(), 200);
         if response.body().as_ref() == b"Error processing tokens" {
