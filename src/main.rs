@@ -54,6 +54,7 @@ mod tests {
 
         Ok(())
     }
+    #[tokio::test]
     async fn test_node_creation() -> Result<()> {
         let node = iroh::node::Node::memory()
             .enable_docs()
