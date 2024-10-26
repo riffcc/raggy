@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, Context};
 use warp::Filter;
 use std::env;
 use config::{Config, File};
@@ -12,13 +12,22 @@ async fn main() -> Result<()> {
     settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
     let token: String = settings.get("token").unwrap_or_default();
 
-    // Start HTTP server
+    // Function to handle "talk" command
+    async fn handle_talk(input: String) -> Result<Vec<u32>> {
+        let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
+            .context("Failed to load tokenizer")?;
+        let encoding = tokenizer.encode(input, true)
+            .context("Failed to encode input")?;
+        Ok(encoding.get_ids().to_vec())
+    }
     let api = warp::path("talk")
         .and(warp::header::exact("Authorization", format!("Bearer {}", token)))
         .and(warp::body::json())
         .map(|tokens: Vec<u32>| {
-            // Process tokens (currently does nothing)
-            warp::reply::json(&tokens)
+            match handle_talk(tokens).await {
+                Ok(response) => warp::reply::json(&response),
+                Err(_) => warp::reply::json(&"Error processing tokens"),
+            }
         });
 
     tokio::spawn(warp::serve(api).run(([127, 0, 0, 1], 3030)));
@@ -29,9 +38,10 @@ async fn main() -> Result<()> {
             println!("Enter your message:");
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
-            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)?;
-            let encoding = tokenizer.encode(input, true)?;
-            println!("Tokens: {:?}", encoding.get_ids());
+            match handle_talk(input).await {
+                Ok(tokens) => println!("Tokens: {:?}", tokens),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
     }
     let node = iroh::node::Node::memory()
