@@ -1,6 +1,6 @@
 use anyhow::Result;
 use iroh::client::blobs::Client;
-use iroh::client::blobs::BlobStatus;
+use iroh::client::blobs::{BlobStatus, BaoBlobSize};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -26,8 +26,8 @@ async fn main() -> Result<()> {
             // Assuming you want to check the status of the blob after creation
             let status = node.blobs().status(res.hash).await?;
             match status {
-                BlobStatus::Complete => println!("Blob is complete"),
-                BlobStatus::Incomplete => println!("Blob is incomplete"),
+                BlobStatus::Complete { size } => println!("Blob is complete with size: {}", size),
+                BlobStatus::Partial { size } => println!("Blob is incomplete with size: {:?}", size),
                 BlobStatus::NotFound => println!("Blob not found"),
             }
         },
@@ -75,7 +75,7 @@ mod tests {
         let res = node.blobs().add_bytes(content.clone()).await?;
         // Assuming you want to check the status of the blob after creation
         let status = node.blobs().status(res.hash).await?;
-        assert_eq!(status, BlobStatus::Complete);
+        assert!(matches!(status, BlobStatus::Complete { .. }));
 
         // Test blob retrieval
         let blob = node.blobs().read_to_bytes(res.hash).await?;
