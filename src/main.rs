@@ -1,6 +1,6 @@
 use anyhow::Result;
-use iroh::client::blobs::BlobStatus;
-use iroh_blobs::store::traits::BaoBlobSize;
+use iroh::baomap::Hash;
+use iroh::client::blobs::{BlobStatus, BaoBlobSize};
 
 #[tokio::main]
 async fn main() -> Result<()> {
