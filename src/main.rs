@@ -1,4 +1,5 @@
 use anyhow::Result;
+use iroh::sync::store::BlobStore;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,7 +19,7 @@ async fn main() -> Result<()> {
     println!("Created doc: {}", doc.id());
     // Create a blob
     let content = b"Hello, Iroh!";
-    match node.blobs().add(content).await {
+    match node.blobs().import_bytes(content).await {
         Ok(blob_hash) => println!("Created blob with hash: {}", blob_hash),
         Err(e) => eprintln!("Failed to create blob: {}", e),
     }
@@ -61,24 +62,19 @@ mod tests {
 
         // Test blob creation
         let content = b"Hello, Iroh!";
-        let blob_hash = node.blobs().add(content).await?;
+        let blob_hash = node.blobs().import_bytes(content).await?;
         assert!(!blob_hash.to_string().is_empty());
 
         // Test blob retrieval
-        match node.blobs().get(&blob_hash).await {
-            Ok(retrieved_content) => {
-                assert_eq!(retrieved_content, content);
-            },
-            Err(e) => panic!("Failed to retrieve blob: {}", e),
-        }
+        let mut out = Vec::new();
+        node.blobs().export_to_vec(&blob_hash, &mut out).await?;
+        assert_eq!(&out, content);
 
         // Test non-existent blob
-        let invalid_hash = iroh::bytes::Hash::new([0; 32]);
-        assert!(node.blobs().get(&invalid_hash).await.is_err());
+        let invalid_hash = iroh::hash::Hash::new([0; 32]);
+        let mut out = Vec::new();
+        assert!(node.blobs().export_to_vec(&invalid_hash, &mut out).await.is_err());
 
         Ok(())
     }
 }
-
-
-
