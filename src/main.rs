@@ -1,6 +1,6 @@
 use anyhow::Result;
-use iroh::baomap::Hash;
-use iroh::client::blobs::{BlobStatus, BaoBlobSize};
+use iroh::hash::Hash;
+use iroh::client::blobs::BlobStatus;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(blob, content);
 
         // Test retrieval of non-existent blob
-        // blob status goes here, not hash stupidity
+        let invalid_hash = Hash::from([0u8; 32]); // Example invalid hash
         assert!(node.blobs().read_to_bytes(invalid_hash).await.is_err());
 
         Ok(())
