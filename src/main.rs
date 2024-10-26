@@ -44,10 +44,14 @@ async fn main() -> Result<()> {
             println!("Enter your message:");
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
-            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)?;
-            match handle_talk(&tokenizer, input).await {
-                Ok(tokens) => println!("Tokens: {:?}", tokens),
-                Err(e) => eprintln!("Error: {}", e),
+            match Tokenizer::from_pretrained("bert-base-uncased", None) {
+                Ok(tokenizer) => {
+                    match handle_talk(&tokenizer, input).await {
+                        Ok(tokens) => println!("Tokens: {:?}", tokens),
+                        Err(e) => eprintln!("Error: {}", e),
+                    }
+                },
+                Err(e) => eprintln!("Error initializing tokenizer: {}", e),
             }
         }
     }
@@ -167,9 +171,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_talk() -> Result<()> {
-        let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)?;
+        let tokenizer = match Tokenizer::from_pretrained("bert-base-uncased", None) {
+            Ok(t) => t,
+            Err(e) => anyhow::bail!("Failed to initialize tokenizer: {}", e),
+        };
         let input = "Hello, world!".to_string();
-        let tokens = handle_talk(&tokenizer, input).await?;
+        let tokens = match handle_talk(&tokenizer, input).await {
+            Ok(t) => t,
+            Err(e) => anyhow::bail!("Failed to handle talk: {}", e),
+        };
         assert!(!tokens.is_empty());
         Ok(())
     }
