@@ -1,13 +1,18 @@
 use anyhow::Result;
-use iroh::node::Node;
-use iroh_blobs::store::MemoryStore;
+use iroh;
+use tokio;
 
-pub async fn create_iroh_node() -> Result<(Node<MemoryStore>, String)> {
-    let node = iroh::node::Node::memory().spawn().await?;
-    let client = node.client();
-    let hash = client.blobs().add_bytes(b"some data".to_vec()).await?.hash;
-    println!("hash: {}", hash);
-    let hash_str = hash.to_string();
+pub async fn create_iroh_node() -> Result<(iroh::Iroh, String, String, String)> {
+    // Create in memory iroh node
+    let node = iroh::Iroh::memory().await?;
+    let node_id = node.net().node_id().await?;
+    println!("Started Iroh node: {}", node_id);
 
-    Ok((node, hash_str))
+    let author = node.authors().default().await?;
+    println!("Default author: {}", author);
+
+    let doc = node.docs().create().await?;
+    println!("Created doc: {}", doc.id());
+
+    Ok((node, node_id.to_string(), author.to_string(), doc.id().to_string()))
 }
