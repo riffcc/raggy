@@ -15,7 +15,7 @@ async def test_node_creation():
     assert isinstance(node_id, str)
     assert len(node_id) > 0
     
-    # Test author creation
+    # Test getting default author
     author = await node.create_author()
     assert author is not None
     
