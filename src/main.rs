@@ -161,4 +161,44 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_handle_talk() -> Result<()> {
+        let input = "Hello, world!".to_string();
+        let tokens = handle_talk(input).await?;
+        assert!(!tokens.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_api_talk() -> Result<()> {
+        let mut settings = Config::default();
+        settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
+        let token: String = settings.get("token").unwrap_or_default();
+        let auth_header = format!("Bearer {}", token);
+        let api = warp::path("talk")
+            .and(warp::body::json())
+            .and_then(move |input: String| {
+                let auth_header = format!("Bearer {}", token);
+                async move {
+                    match handle_talk(input).await {
+                        Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
+                        Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+                    }
+                }
+            });
+
+        let input = "Hello, world!".to_string();
+        let response = warp::test::request()
+            .path("/talk")
+            .header("Authorization", &auth_header)
+            .json(&input)
+            .reply(&api)
+            .await;
+
+        assert_eq!(response.status(), 200);
+        let tokens: Vec<u32> = serde_json::from_slice(response.body())?;
+        assert!(!tokens.is_empty());
+        Ok(())
+    }
 }
