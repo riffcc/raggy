@@ -33,6 +33,14 @@ async fn main() -> Result<()> {
         Err(e) => eprintln!("Failed to create blob: {}", e),
     }
 
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_root_doc_creation() -> Result<()> {
         let node = iroh::node::Node::memory()
@@ -46,15 +54,6 @@ async fn main() -> Result<()> {
 
         Ok(())
     }
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
     async fn test_node_creation() -> Result<()> {
         let node = iroh::node::Node::memory()
             .enable_docs()
