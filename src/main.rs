@@ -1,9 +1,39 @@
 use anyhow::Result;
+use warp::Filter;
+use std::env;
+use config::{Config, File};
+use tokenizers::Tokenizer;
 use iroh::client::blobs::BlobStatus;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Create in memory iroh node with docs enabled
+    // Load configuration
+    let mut settings = Config::default();
+    settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
+    let token: String = settings.get("token").unwrap_or_default();
+
+    // Start HTTP server
+    let api = warp::path("talk")
+        .and(warp::header::exact("Authorization", format!("Bearer {}", token)))
+        .and(warp::body::json())
+        .map(|tokens: Vec<u32>| {
+            // Process tokens (currently does nothing)
+            warp::reply::json(&tokens)
+        });
+
+    tokio::spawn(warp::serve(api).run(([127, 0, 0, 1], 3030)));
+
+    // CLI interaction
+    if let Some(arg) = env::args().nth(1) {
+        if arg == "talk" {
+            println!("Enter your message:");
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)?;
+            let encoding = tokenizer.encode(input, true)?;
+            println!("Tokens: {:?}", encoding.get_ids());
+        }
+    }
     let node = iroh::node::Node::memory()
         .enable_docs()
         .spawn()
