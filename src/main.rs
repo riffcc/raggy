@@ -14,7 +14,7 @@ async fn main() -> Result<()> {
 
     // Function to handle "talk" command
     pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
-        let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
+        let tokenizer = Tokenizer::from_file("bert-base-uncased.json")
             .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
         let encoding = tokenizer.encode(input, true)
             .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
