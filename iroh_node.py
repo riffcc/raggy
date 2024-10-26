@@ -33,7 +33,7 @@ class IrohNode:
             raise RuntimeError("Node not initialized")
         try:
             if not self._author:
-                self._author = await self.instance.author_create()
+                self._author = await self.instance.create_author()
                 logger.debug(f"Created new author: {self._author}")
             return self._author
         except Exception as e:
@@ -45,7 +45,7 @@ class IrohNode:
         if not self.instance:
             raise RuntimeError("Node not initialized")
         try:
-            doc = await self.instance.doc_create("test doc")
+            doc = await self.instance.create_doc("test doc")
             logger.debug(f"Created document: {doc}")
             return doc
         except Exception as e:
