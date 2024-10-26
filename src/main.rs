@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
     };
 
     // Set up Axum router
-    let app = Router::new()
+    let app: Router<AppState> = Router::new()
         .route("/talk", post(talk_handler))
         .with_state(state);
 
