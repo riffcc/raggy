@@ -83,15 +83,15 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use once_cell::sync::Lazy;
     use tokio::runtime::Runtime;
 
-    fn get_runtime() -> Runtime {
+    static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
         Runtime::new().expect("Failed to create runtime")
-    }
+    });
 
     #[tokio::test]
     async fn test_root_doc_creation() -> Result<()> {
-        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -105,7 +105,6 @@ mod tests {
     }
     #[tokio::test]
     async fn test_node_creation() -> Result<()> {
-        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -128,7 +127,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_blob_creation() -> Result<()> {
-        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -144,7 +142,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_blob_retrieval() -> Result<()> {
-        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -160,7 +157,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_non_existent_blob_retrieval() -> Result<()> {
-        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
