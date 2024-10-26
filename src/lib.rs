@@ -6,14 +6,9 @@ pub async fn create_iroh_node() -> Result<(Node<MemoryStore>, String, String, St
         .spawn()
         .await?;
 
-    let node_id = node.net().node_id().await?;
-    let node_id_str = node_id.to_string();
+    let client = node.client();
+    let hash = client.blobs().add_bytes(b"some data".to_vec()).await?.hash;
+    let hash_str = hash.to_string();
 
-    let author = node.authors().default().await?;
-    let author_str = author.to_string();
-
-    let doc = node.docs().create().await?;
-    let doc_id = doc.id().to_string();
-
-    Ok((node, node_id_str, author_str, doc_id))
+    Ok((node, hash_str))
 }
