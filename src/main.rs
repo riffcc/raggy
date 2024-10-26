@@ -9,7 +9,10 @@ use axum::{
     Router,
     Json,
     extract::State,
+    response::IntoResponse,
 };
+use tower::ServiceExt;
+use http::Request;
 
 // Shared state for handlers
 #[derive(Clone)]
@@ -58,10 +61,8 @@ async fn main() -> Result<()> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     println!("Starting server on {}", addr);
-    tokio::spawn(axum::serve(
-        tokio::net::TcpListener::bind(addr).await?,
-        app
-    ));
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
 
     // CLI interaction
     if let Some(arg) = env::args().nth(1) {
