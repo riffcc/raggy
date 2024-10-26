@@ -9,10 +9,9 @@ use axum::{
     Router,
     Json,
     extract::State,
-    response::IntoResponse,
+    body::to_bytes,
 };
-use tower::ServiceExt;
-use http::Request;
+use tower::util::ServiceExt;
 
 // Shared state for handlers
 #[derive(Clone)]
@@ -57,7 +56,12 @@ async fn main() -> Result<()> {
     // Set up Axum router
     let app = Router::new()
         .route("/talk", post(talk_handler))
-        .with_state(state);
+        .with_state(state.clone());
+
+    let state = AppState {
+        token,
+        tokenizer,
+    };
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     println!("Starting server on {}", addr);
@@ -257,7 +261,7 @@ mod tests {
             assert_eq!(response.status(), StatusCode::OK);
 
             // Get response body
-            let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+            let body = to_bytes(response.into_body()).await.unwrap();
             let tokens: Vec<u32> = serde_json::from_slice(&body).unwrap();
             assert!(!tokens.is_empty());
 
