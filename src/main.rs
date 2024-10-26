@@ -1,6 +1,6 @@
 use anyhow::Result;
 use iroh::client::blobs::Client;
-use iroh::baomap::Hash; // Corrected import
+use iroh::client::blobs::BlobStatus;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,7 +21,11 @@ async fn main() -> Result<()> {
     // Create a blob
     let content = Vec::from("Hello, Iroh!");
     match node.blobs().add_bytes(content.clone()).await {
-        Ok(res) => println!("Created blob with hash: {:?}", res.hash),
+        Ok(res) => match res.status {
+            BlobStatus::Complete => println!("Blob is complete"),
+            BlobStatus::Incomplete => println!("Blob is incomplete"),
+            BlobStatus::NotFound => println!("Blob not found"),
+        },
         Err(e) => eprintln!("Failed to create blob: {}", e),
     }
 
@@ -65,7 +69,7 @@ mod tests {
         // Test blob creation
         let content = Vec::from("Hello, Iroh!");
         let res = node.blobs().add_bytes(content.clone()).await?;
-        assert!(!res.hash.to_string().is_empty());
+        assert_eq!(res.status, BlobStatus::Complete);
 
         // Test blob retrieval
         let blob = node.blobs().read_to_bytes(res.hash).await?;
