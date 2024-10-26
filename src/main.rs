@@ -162,7 +162,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_handle_talk() -> Result<()> {
         let input = "Hello, world!".to_string();
         let tokens = handle_talk(input).await?;
@@ -170,7 +170,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_api_talk() -> Result<()> {
         let mut settings = Config::default();
         settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
