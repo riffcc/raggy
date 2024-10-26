@@ -201,7 +201,7 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), 200);
-        if response.body() == b"Error processing tokens" {
+        if response.body().as_ref() == b"Error processing tokens" {
             return Ok(());
         }
         let tokens: Vec<u32> = serde_json::from_slice(response.body())?;
