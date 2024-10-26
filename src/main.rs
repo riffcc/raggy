@@ -5,9 +5,7 @@ use config::{Config, File};
 use tokenizers::Tokenizer;
 use iroh::client::blobs::BlobStatus;
 
-pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
-    let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
-        .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
+pub async fn handle_talk(tokenizer: &Tokenizer, input: String) -> Result<Vec<u32>> {
     let encoding = tokenizer.encode(input, true)
         .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
     Ok(encoding.get_ids().to_vec())
@@ -25,8 +23,10 @@ async fn main() -> Result<()> {
         .and(warp::body::json())
         .and_then(move |input: String| {
             let _auth_header = format!("Bearer {}", token);
+            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
+                .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
             async move {
-                match handle_talk(input).await {
+                match handle_talk(&tokenizer, input).await {
                     Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
                     Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
                 }
@@ -41,7 +41,8 @@ async fn main() -> Result<()> {
             println!("Enter your message:");
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
-            match handle_talk(input).await {
+            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)?;
+            match handle_talk(&tokenizer, input).await {
                 Ok(tokens) => println!("Tokens: {:?}", tokens),
                 Err(e) => eprintln!("Error: {}", e),
             }
@@ -163,8 +164,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_talk() -> Result<()> {
+        let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)?;
         let input = "Hello, world!".to_string();
-        let tokens = handle_talk(input).await?;
+        let tokens = handle_talk(&tokenizer, input).await?;
         assert!(!tokens.is_empty());
         Ok(())
     }
@@ -179,8 +181,10 @@ mod tests {
             .and(warp::body::json())
             .and_then(move |input: String| {
                 let _auth_header = format!("Bearer {}", token);
+                let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
+                    .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
                 async move {
-                    match handle_talk(input).await {
+                    match handle_talk(&tokenizer, input).await {
                         Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
                         Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
                     }
