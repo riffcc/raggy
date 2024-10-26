@@ -23,12 +23,15 @@ async fn main() -> Result<()> {
         .and(warp::body::json())
         .and_then(move |input: String| {
             let _auth_header = format!("Bearer {}", token);
-            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
-                .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
             async move {
-                match handle_talk(&tokenizer, input).await {
-                    Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
-                    Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+                match Tokenizer::from_pretrained("bert-base-uncased", None) {
+                    Ok(tokenizer) => {
+                        match handle_talk(&tokenizer, input).await {
+                            Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
+                            Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+                        }
+                    },
+                    Err(_) => Ok(warp::reply::json(&"Error initializing tokenizer")),
                 }
             }
         });
@@ -181,12 +184,15 @@ mod tests {
             .and(warp::body::json())
             .and_then(move |input: String| {
                 let _auth_header = format!("Bearer {}", token);
-                let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
-                    .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
                 async move {
-                    match handle_talk(&tokenizer, input).await {
-                        Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
-                        Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+                    match Tokenizer::from_pretrained("bert-base-uncased", None) {
+                        Ok(tokenizer) => {
+                            match handle_talk(&tokenizer, input).await {
+                                Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
+                                Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+                            }
+                        },
+                        Err(_) => Ok(warp::reply::json(&"Error initializing tokenizer")),
                     }
                 }
             });
