@@ -164,44 +164,47 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_handle_talk() -> Result<()> {
-        let input = "Hello, world!".to_string();
-        let tokens = handle_talk(input).await?;
-        assert!(!tokens.is_empty());
-        Ok(())
+        tokio::task::block_in_place(|| {
+            let input = "Hello, world!".to_string();
+            let tokens = tokio::runtime::Handle::current().block_on(handle_talk(input))?;
+            assert!(!tokens.is_empty());
+            Ok(())
+        })
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_api_talk() -> Result<()> {
-        let mut settings = Config::default();
-        settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
-        let token: String = settings.get("token").unwrap_or_default();
-        let _auth_header = format!("Bearer {}", token);
-        let api = warp::path("talk")
-            .and(warp::body::json())
-            .and_then(move |input: String| {
-                let _auth_header = format!("Bearer {}", token);
-                async move {
-                    match handle_talk(input).await {
-                        Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
-                        Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+        tokio::task::block_in_place(|| {
+            let mut settings = Config::default();
+            settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
+            let token: String = settings.get("token").unwrap_or_default();
+            let _auth_header = format!("Bearer {}", token);
+            let api = warp::path("talk")
+                .and(warp::body::json())
+                .and_then(move |input: String| {
+                    let _auth_header = format!("Bearer {}", token);
+                    async move {
+                        match handle_talk(input).await {
+                            Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
+                            Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
+                        }
                     }
-                }
-            });
+                });
 
-        let input = "Hello, world!".to_string();
-        let response = warp::test::request()
-            .path("/talk")
-            .header("Authorization", &_auth_header)
-            .json(&input)
-            .reply(&api)
-            .await;
+            let input = "Hello, world!".to_string();
+            let response = tokio::runtime::Handle::current().block_on(warp::test::request()
+                .path("/talk")
+                .header("Authorization", &_auth_header)
+                .json(&input)
+                .reply(&api));
 
-        assert_eq!(response.status(), 200);
-        if response.body().as_ref() == b"Error processing tokens" {
-            return Ok(());
-        }
-        let tokens: Vec<u32> = serde_json::from_slice(response.body()).map_err(|e| anyhow::anyhow!("Failed to parse response body: {:?}", e))?;
-        assert!(!tokens.is_empty());
-        Ok(())
+            assert_eq!(response.status(), 200);
+            if response.body().as_ref() == b"Error processing tokens" {
+                return Ok(());
+            }
+            let tokens: Vec<u32> = serde_json::from_slice(response.body()).map_err(|e| anyhow::anyhow!("Failed to parse response body: {:?}", e))?;
+            assert!(!tokens.is_empty());
+            Ok(())
+        })
     }
 }
