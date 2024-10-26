@@ -1,14 +1,18 @@
-use anyhow::{Result};
+use anyhow::Result;
 use warp::Filter;
 use std::env;
 use config::{Config, File};
 use tokenizers::Tokenizer;
 use iroh::client::blobs::BlobStatus;
+use once_cell::sync::Lazy;
+
+static TOKENIZER: Lazy<Tokenizer> = Lazy::new(|| {
+    Tokenizer::from_pretrained("bert-base-uncased", None)
+        .expect("Failed to load tokenizer")
+});
 
 pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
-    let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
-        .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
-    let encoding = tokenizer.encode(input, true)
+    let encoding = TOKENIZER.encode(input, true)
         .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
     Ok(encoding.get_ids().to_vec())
 }
