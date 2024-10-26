@@ -1,4 +1,6 @@
 use anyhow::Result;
+use bytes::Bytes;
+use iroh::hash::Hash;
 use iroh::client::blobs::Client;
 
 #[tokio::main]
@@ -68,8 +70,8 @@ mod tests {
         // Test blob retrieval
         let mut out = Vec::new();
         let blob = node.blobs().read_to_bytes(res.hash).await?;
-        assert_eq!(blob, bytes::Bytes::from(content));
-        assert_eq!(&out, content);
+        assert_eq!(blob, Bytes::from(content));
+        assert_eq!(out, content);
 
         // Test non-existent blob
         let invalid_hash = Hash::new([0; 32]);
