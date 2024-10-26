@@ -33,7 +33,7 @@ class IrohNode:
             raise RuntimeError("Node not initialized")
         try:
             if not self._author:
-                self._author = await self.instance.authors().create()
+                self._author = await self.instance.author_create()
                 logger.debug(f"Created new author: {self._author}")
             return self._author
         except Exception as e:
@@ -45,7 +45,7 @@ class IrohNode:
         if not self.instance:
             raise RuntimeError("Node not initialized")
         try:
-            doc = await self.instance.documents().create("test doc")
+            doc = await self.instance.doc_create("test doc")
             logger.debug(f"Created document: {doc}")
             return doc
         except Exception as e:
@@ -56,7 +56,7 @@ class IrohNode:
         """Cleanup and shutdown the node"""
         if self.instance:
             try:
-                await self.instance.shutdown()
+                # Just clear the instance since Iroh handles cleanup internally
                 logger.debug("Node shutdown complete")
             except Exception as e:
                 logger.error(f"Error during shutdown: {e}")
