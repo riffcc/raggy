@@ -165,8 +165,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_talk() -> Result<()> {
         let input = "Hello, world!".to_string();
-        let handle = tokio::spawn(async move { handle_talk(input).await });
-        let tokens = handle.await??;
+        let tokens = handle_talk(input).await?;
         assert!(!tokens.is_empty());
         Ok(())
     }
@@ -190,15 +189,12 @@ mod tests {
             });
 
         let input = "Hello, world!".to_string();
-        let handle = tokio::spawn(async move {
-            warp::test::request()
-                .path("/talk")
-                .header("Authorization", &_auth_header)
-                .json(&input)
-                .reply(&api)
-                .await
-        });
-        let response = handle.await.map_err(|e| anyhow::anyhow!("Failed to join task: {:?}", e))?;
+        let response = warp::test::request()
+            .path("/talk")
+            .header("Authorization", &_auth_header)
+            .json(&input)
+            .reply(&api)
+            .await;
 
         assert_eq!(response.status(), 200);
         if response.body().as_ref() == b"Error processing tokens" {
