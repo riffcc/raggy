@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     println!("Starting server on {}", addr);
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
 
     // Handle CLI interaction before starting server
     if let Some(arg) = env::args().nth(1) {
@@ -206,24 +206,19 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_handle_talk() -> Result<()> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
-                .map_err(|e| anyhow::anyhow!("Failed to initialize tokenizer: {}", e))?;
-            
-            let input = "Hello, world!".to_string();
-            let tokens = handle_talk(&tokenizer, input).await?;
-            assert!(!tokens.is_empty());
-            Ok(())
-        })
+    #[tokio::test]
+    async fn test_handle_talk() -> Result<()> {
+        let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize tokenizer: {}", e))?;
+        
+        let input = "Hello, world!".to_string();
+        let tokens = handle_talk(&tokenizer, input).await?;
+        assert!(!tokens.is_empty());
+        Ok(())
     }
 
-    #[test]
-    fn test_api_talk() -> Result<()> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
+    #[tokio::test]
+    async fn test_api_talk() -> Result<()> {
             // Initialize app state
             let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
                 .map_err(|e| anyhow::anyhow!("Failed to initialize tokenizer: {}", e))?;
