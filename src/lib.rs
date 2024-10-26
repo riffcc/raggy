@@ -1,5 +1,6 @@
 use anyhow::Result;
-use iroh::node::{Node, mem::MemStore};
+use iroh::node::Node;
+use iroh::store::MemStore;
 
 pub async fn create_iroh_node() -> Result<(Node<MemStore>, String, String, String)> {
     // Create in memory iroh node
