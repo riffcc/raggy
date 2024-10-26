@@ -40,7 +40,7 @@ class IrohNode:
             logger.error(f"Failed to create author: {e}")
             raise
     
-    async def create_doc(self):
+    async def create_doc(self) -> iroh.Document:
         """Create a new document"""
         if not self.instance:
             raise RuntimeError("Node not initialized")

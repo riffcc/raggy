@@ -22,7 +22,7 @@ async def test_node_creation():
     # Test doc creation
     doc = await node.create_doc()
     assert doc is not None
-    assert doc.id() is not None
+    assert doc.id is not None
 
     # Cleanup
     await node.shutdown()
