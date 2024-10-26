@@ -1,5 +1,5 @@
 use anyhow::Result;
-use iroh::hash::Hash;
+use iroh::util::Hash;
 use iroh::client::blobs::BlobStatus;
 
 #[tokio::main]
