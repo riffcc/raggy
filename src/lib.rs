@@ -1,9 +1,9 @@
 use anyhow::Result;
-use iroh::node::Node;
+use iroh::client::Client as Node;
 
 pub async fn create_iroh_node() -> Result<(Node, String, String, String)> {
     // Create in memory iroh node
-    let node = Node::memory().spawn().await?;
+    let node = Node::new().await?;
     let node_id = node.net().node_id().await?;
     println!("Started Iroh node: {}", node_id);
 
