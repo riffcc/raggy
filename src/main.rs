@@ -1,4 +1,4 @@
-use anyhow::{Result, Context};
+use anyhow::Result;
 use warp::Filter;
 use std::env;
 use config::{Config, File};
@@ -15,18 +15,18 @@ async fn main() -> Result<()> {
     // Function to handle "talk" command
     async fn handle_talk(input: String) -> Result<Vec<u32>> {
         let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
-            .context("Failed to load tokenizer")?;
+            .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
         let encoding = tokenizer.encode(input, true)
             .context("Failed to encode input")?;
         Ok(encoding.get_ids().to_vec())
     }
     let api = warp::path("talk")
-        .and(warp::header::exact("Authorization", format!("Bearer {}", token)))
+        .and(warp::header::exact("Authorization", &format!("Bearer {}", token)))
         .and(warp::body::json())
-        .map(|tokens: Vec<u32>| {
-            match handle_talk(tokens).await {
-                Ok(response) => warp::reply::json(&response),
-                Err(_) => warp::reply::json(&"Error processing tokens"),
+        .and_then(|input: String| async move {
+            match handle_talk(input).await {
+                Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
+                Err(_) => Ok(warp::reply::json(&"Error processing tokens")),
             }
         });
 
