@@ -15,8 +15,8 @@ class IrohNode:
     async def create_memory_node(cls) -> 'IrohNode':
         """Create a new in-memory Iroh node"""
         node = cls()
-        node.instance = await iroh.Iroh.memory()
-        logger.debug(f"Created memory node")
+        node.instance = await iroh.Iroh.memory(capabilities=["author", "doc"])
+        logger.debug(f"Created memory node with author and doc capabilities")
         return node
     
     async def get_node_id(self) -> str:
