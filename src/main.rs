@@ -1,6 +1,5 @@
 use anyhow::Result;
 use iroh::client::blobs::Client;
-use iroh::hash::Hash;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,7 +18,7 @@ async fn main() -> Result<()> {
     let doc = node.docs().create().await?;
     println!("Created doc: {}", doc.id());
     // Create a blob
-    let content = b"Hello, Iroh!";
+    let content = Vec::from("Hello, Iroh!");
     match node.blobs().add_bytes(content).await {
         Ok(res) => println!("Created blob with hash: {:?}", res.hash),
         Err(e) => eprintln!("Failed to create blob: {}", e),
@@ -62,14 +61,14 @@ mod tests {
             .await?;
 
         // Test blob creation
-        let content = b"Hello, Iroh!";
+        let content = Vec::from("Hello, Iroh!");
         let res = node.blobs().add_bytes(content).await?;
         assert!(!res.hash.to_string().is_empty());
 
         // Test blob retrieval
         let mut out = Vec::new();
         let blob = node.blobs().read_to_bytes(res.hash).await?;
-        assert_eq!(blob, content);
+        assert_eq!(blob, bytes::Bytes::from(content));
         assert_eq!(&out, content);
 
         // Test non-existent blob
