@@ -1,4 +1,4 @@
-use anyhow::{Result, Context};
+use anyhow::{Result, Context, ResultExt};
 use warp::Filter;
 use std::env;
 use config::{Config, File};
@@ -20,9 +20,11 @@ async fn main() -> Result<()> {
             .context("Failed to encode input")?;
         Ok(encoding.get_ids().to_vec())
     }
-    let auth_header = format!("Bearer {}", token);
     let api = warp::path("talk")
-        .and(warp::header::exact("Authorization", &auth_header))
+        .and_then(move || {
+            let auth_header = format!("Bearer {}", token);
+            warp::header::exact("Authorization", &auth_header)
+        })
         .and(warp::body::json())
         .and_then(|input: String| async move {
             match handle_talk(input).await {
