@@ -63,25 +63,42 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_blob_operations() -> Result<()> {
+    async fn test_blob_creation() -> Result<()> {
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
             .await?;
 
-        // Test blob creation
         let content = Vec::from("Hello, Iroh!");
         let res = node.blobs().add_bytes(content.clone()).await?;
-        // Assuming you want to check the status of the blob after creation
         let status = node.blobs().status(res.hash).await?;
         assert!(matches!(status, BlobStatus::Complete { .. }));
 
-        // Test blob retrieval
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_blob_retrieval() -> Result<()> {
+        let node = iroh::node::Node::memory()
+            .enable_docs()
+            .spawn()
+            .await?;
+
+        let content = Vec::from("Hello, Iroh!");
+        let res = node.blobs().add_bytes(content.clone()).await?;
         let blob = node.blobs().read_to_bytes(res.hash).await?;
         assert_eq!(blob, content);
 
-        // Test retrieval of non-existent blob
-        // Example invalid hash
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_non_existent_blob_retrieval() -> Result<()> {
+        let node = iroh::node::Node::memory()
+            .enable_docs()
+            .spawn()
+            .await?;
+
         let invalid_hash = [0u8; 32];
         assert!(node.blobs().read_to_bytes(invalid_hash.into()).await.is_err());
 
