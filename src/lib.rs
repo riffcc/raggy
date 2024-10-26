@@ -1,5 +1,5 @@
 use anyhow::Result;
-use iroh::client::Client as Iroh;
+use iroh::client::docs::Client as Iroh;
 
 pub async fn create_iroh_node() -> Result<(Iroh, String, String, String)> {
     // Create in memory iroh node
