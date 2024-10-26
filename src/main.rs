@@ -1,7 +1,7 @@
 use anyhow::Result;
-use iroh::baomap::Hash;
-use iroh::client::blobs::BlobStatus;
-use iroh_blobs::store::traits::BaoBlobSize;
+use iroh::hash::Hash;
+use iroh::blobs::BlobStatus;
+use iroh::blobs::BaoBlobSize;
 
 #[tokio::main]
 async fn main() -> Result<()> {
