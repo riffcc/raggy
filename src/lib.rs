@@ -2,8 +2,11 @@ use anyhow::Result;
 use iroh::node::Node;
 
 pub async fn create_iroh_node() -> Result<(Node, String, String, String)> {
-    // Create in memory iroh node
-    let node = Node::memory().spawn().await?;
+    // Create an in-memory iroh node with default configuration
+    let node = Node::memory()
+        .name("raggy-node")  // Give our node a name
+        .spawn()
+        .await?;
 
     let node_id = node.net().node_id().await?;
     let node_id_str = node_id.to_string();
