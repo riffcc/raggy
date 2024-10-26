@@ -1,7 +1,7 @@
 import iroh
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Any
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class IrohNode:
             logger.error(f"Failed to create author: {e}")
             raise
     
-    async def create_doc(self) -> iroh.Document:
+    async def create_doc(self) -> Any:
         """Create a new document"""
         if not self.instance:
             raise RuntimeError("Node not initialized")
