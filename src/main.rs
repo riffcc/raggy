@@ -11,7 +11,7 @@ use axum::{
     extract::State,
     body::to_bytes,
 };
-use tower::util::ServiceExt;
+use tower::ServiceExt;
 
 // Shared state for handlers
 #[derive(Clone)]
@@ -49,19 +49,14 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to initialize tokenizer: {}", e))?;
 
     let state = AppState {
-        token,
-        tokenizer,
+        token: token.clone(),
+        tokenizer: tokenizer.clone(),
     };
 
     // Set up Axum router
     let app = Router::new()
         .route("/talk", post(talk_handler))
-        .with_state(state.clone());
-
-    let state = AppState {
-        token,
-        tokenizer,
-    };
+        .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     println!("Starting server on {}", addr);
@@ -261,7 +256,7 @@ mod tests {
             assert_eq!(response.status(), StatusCode::OK);
 
             // Get response body
-            let body = to_bytes(response.into_body()).await.unwrap();
+            let body = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
             let tokens: Vec<u32> = serde_json::from_slice(&body).unwrap();
             assert!(!tokens.is_empty());
 
