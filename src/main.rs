@@ -204,7 +204,7 @@ mod tests {
         if response.body().as_ref() == b"Error processing tokens" {
             return Ok(());
         }
-        let tokens: Vec<u32> = serde_json::from_slice(response.body())?;
+        let tokens: Vec<u32> = serde_json::from_slice(response.body()).map_err(|e| anyhow::anyhow!("Failed to parse response body: {:?}", e))?;
         assert!(!tokens.is_empty());
         Ok(())
     }
