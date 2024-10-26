@@ -165,7 +165,8 @@ mod tests {
     #[tokio::test]
     async fn test_handle_talk() -> Result<()> {
         let input = "Hello, world!".to_string();
-        let tokens = handle_talk(input).await?;
+        let handle = tokio::spawn(async move { handle_talk(input).await });
+        let tokens = handle.await??;
         assert!(!tokens.is_empty());
         Ok(())
     }
@@ -189,12 +190,15 @@ mod tests {
             });
 
         let input = "Hello, world!".to_string();
-        let response = warp::test::request()
-            .path("/talk")
-            .header("Authorization", &_auth_header)
-            .json(&input)
-            .reply(&api)
-            .await;
+        let handle = tokio::spawn(async move {
+            warp::test::request()
+                .path("/talk")
+                .header("Authorization", &_auth_header)
+                .json(&input)
+                .reply(&api)
+                .await
+        });
+        let response = handle.await??;
 
         assert_eq!(response.status(), 200);
         if response.body().as_ref() == b"Error processing tokens" {
