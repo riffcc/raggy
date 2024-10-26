@@ -170,6 +170,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_talk() -> Result<()> {
+        let _rt = &*RUNTIME; // Hold reference to prevent dropping
         let input = "Hello, world!".to_string();
         let tokens = handle_talk(input).await?;
         assert!(!tokens.is_empty());
@@ -178,6 +179,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_api_talk() -> Result<()> {
+        let _rt = &*RUNTIME; // Hold reference to prevent dropping
         let mut settings = Config::default();
         settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
         let token: String = settings.get("token").unwrap_or_default();
