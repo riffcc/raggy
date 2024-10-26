@@ -1,6 +1,6 @@
 use anyhow::Result;
 use iroh::node::Node;
-use iroh::store::MemoryStore;
+use iroh::mem::store::MemoryStore;
 
 pub async fn create_iroh_node() -> Result<(Node<MemoryStore>, String)> {
     let node = iroh::node::Node::memory().spawn().await?;
