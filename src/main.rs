@@ -179,7 +179,7 @@ mod tests {
         let api = warp::path("talk")
             .and(warp::body::json())
             .and_then(move |input: String| {
-                let _auth_header = format!("Bearer {}", token);
+                let auth_header = format!("Bearer {}", token);
                 async move {
                     match handle_talk(input).await {
                         Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
