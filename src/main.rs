@@ -1,4 +1,4 @@
-use anyhow::{Result, Context as _};
+use anyhow::{Result, Context as _, ResultExt};
 use warp::Filter;
 use std::env;
 use config::{Config, File};
@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
         Ok(encoding.get_ids().to_vec())
     }
     let api = warp::path("talk")
-        .and(warp::header::exact("Authorization", format!("Bearer {}", token)))
+        .and(warp::header::exact("Authorization", &format!("Bearer {}", token)))
         .and(warp::body::json())
         .and_then(|input: String| async move {
             match handle_talk(input).await {
