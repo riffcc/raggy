@@ -175,7 +175,7 @@ mod tests {
         let mut settings = Config::default();
         settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
         let token: String = settings.get("token").unwrap_or_default();
-        let auth_header = format!("Bearer {}", token);
+        let _auth_header = format!("Bearer {}", token);
         let api = warp::path("talk")
             .and(warp::body::json())
             .and_then(move |input: String| {
@@ -191,7 +191,7 @@ mod tests {
         let input = "Hello, world!".to_string();
         let response = warp::test::request()
             .path("/talk")
-            .header("Authorization", &auth_header)
+            .header("Authorization", &_auth_header)
             .json(&input)
             .reply(&api)
             .await;
