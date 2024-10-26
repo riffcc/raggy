@@ -13,18 +13,18 @@ async fn main() -> Result<()> {
     let token: String = settings.get("token").unwrap_or_default();
 
     // Function to handle "talk" command
-    async fn handle_talk(input: String) -> Result<Vec<u32>> {
+    pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
         let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
             .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
         let encoding = tokenizer.encode(input, true)
             .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
         Ok(encoding.get_ids().to_vec())
     }
-    let auth_header = format!("Bearer {}", token);
+    let _auth_header = format!("Bearer {}", token);
     let api = warp::path("talk")
         .and(warp::body::json())
         .and_then(move |input: String| {
-            let auth_header = format!("Bearer {}", token);
+            let _auth_header = format!("Bearer {}", token);
             async move {
                 match handle_talk(input).await {
                     Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
