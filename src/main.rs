@@ -21,11 +21,11 @@ async fn main() -> Result<()> {
         Ok(encoding.get_ids().to_vec())
     }
     let auth_header = format!("Bearer {}", token);
+    let auth_header = format!("Bearer {}", token);
     let api = warp::path("talk")
-        .and(warp::header::exact("Authorization", &format!("Bearer {}", token)))
+        .and(warp::header::exact("Authorization", &auth_header))
         .and(warp::body::json())
         .and_then(move |input: String| {
-            let auth_header = format!("Bearer {}", token);
             async move {
                 match handle_talk(input).await {
                     Ok(response) => Ok::<_, warp::Rejection>(warp::reply::json(&response)),
