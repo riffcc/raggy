@@ -4,15 +4,11 @@ use std::env;
 use config::{Config, File};
 use tokenizers::Tokenizer;
 use iroh::client::blobs::BlobStatus;
-use once_cell::sync::Lazy;
-
-static TOKENIZER: Lazy<Tokenizer> = Lazy::new(|| {
-    Tokenizer::from_pretrained("bert-base-uncased", None)
-        .expect("Failed to load tokenizer")
-});
 
 pub async fn handle_talk(input: String) -> Result<Vec<u32>> {
-    let encoding = TOKENIZER.encode(input, true)
+    let tokenizer = Tokenizer::from_pretrained("bert-base-uncased", None)
+        .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {:?}", e))?;
+    let encoding = tokenizer.encode(input, true)
         .map_err(|e| anyhow::anyhow!("Failed to encode input: {:?}", e))?;
     Ok(encoding.get_ids().to_vec())
 }
@@ -87,9 +83,15 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::runtime::Runtime;
+
+    fn get_runtime() -> Runtime {
+        Runtime::new().expect("Failed to create runtime")
+    }
 
     #[tokio::test]
     async fn test_root_doc_creation() -> Result<()> {
+        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -103,6 +105,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_node_creation() -> Result<()> {
+        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -125,6 +128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_blob_creation() -> Result<()> {
+        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -140,6 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_blob_retrieval() -> Result<()> {
+        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
@@ -155,6 +160,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_non_existent_blob_retrieval() -> Result<()> {
+        let rt = get_runtime();
         let node = iroh::node::Node::memory()
             .enable_docs()
             .spawn()
