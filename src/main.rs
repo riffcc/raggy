@@ -116,10 +116,8 @@ mod tests {
     use tower::ServiceExt;
     use http::Request;
     
-    #[test]
-    fn test_root_doc_creation() -> Result<()> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
+    #[tokio::test]
+    async fn test_root_doc_creation() -> Result<()> {
             let node = iroh::node::Node::memory()
                 .enable_docs()
                 .spawn()
@@ -129,7 +127,6 @@ mod tests {
             assert!(!root_doc.id().to_string().is_empty());
 
             Ok(())
-        })
     }
 
     #[test]
