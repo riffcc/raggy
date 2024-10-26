@@ -19,11 +19,11 @@ class IrohNode:
             raise RuntimeError("Node not initialized")
         return await self.instance.net().node_id()
     
-    async def get_default_author(self):
-        """Get the default author for the node"""
+    async def create_author(self):
+        """Create a new author for the node"""
         if not self.instance:
             raise RuntimeError("Node not initialized")
-        return await self.instance.authors().default()
+        return await self.instance.authors().create()
     
     async def create_doc(self):
         """Create a new document"""

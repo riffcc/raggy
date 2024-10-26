@@ -10,9 +10,9 @@ async def main():
     node_id = await node.get_node_id()
     print(f"Node ID: {node_id}")
     
-    # Get and print default author
-    author = await node.get_default_author()
-    print(f"Default author: {author}")
+    # Create and print author
+    author = await node.create_author()
+    print(f"Created author: {author}")
     
     # Create and print doc
     doc = await node.create_doc()
