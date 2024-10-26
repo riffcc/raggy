@@ -164,14 +164,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_talk() -> Result<()> {
+        let rt = tokio::runtime::Runtime::new().unwrap();
         let input = "Hello, world!".to_string();
-        let tokens = handle_talk(input).await?;
+        let tokens = rt.block_on(handle_talk(input))?;
         assert!(!tokens.is_empty());
         Ok(())
     }
 
     #[tokio::test]
     async fn test_api_talk() -> Result<()> {
+        let rt = tokio::runtime::Runtime::new().unwrap();
         let mut settings = Config::default();
         settings.merge(File::with_name(&format!("{}/.raggy", env::var("HOME")?)).required(false))?;
         let token: String = settings.get("token").unwrap_or_default();
@@ -189,12 +191,11 @@ mod tests {
             });
 
         let input = "Hello, world!".to_string();
-        let response = warp::test::request()
+        let response = rt.block_on(warp::test::request()
             .path("/talk")
             .header("Authorization", &_auth_header)
             .json(&input)
-            .reply(&api)
-            .await;
+            .reply(&api));
 
         assert_eq!(response.status(), 200);
         if response.body().as_ref() == b"Error processing tokens" {
