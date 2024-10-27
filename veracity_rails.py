@@ -1,1 +1,0 @@
-from veracity_rails_module import VeracityRails
