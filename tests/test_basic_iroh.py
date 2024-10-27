@@ -1,7 +1,7 @@
 import pytest
 import iroh
 import asyncio
-from veracity_rails_module import VeracityRails
+from ..veracity_rails_module import VeracityRails
 
 @pytest.mark.asyncio
 async def test_iroh_node_start():
