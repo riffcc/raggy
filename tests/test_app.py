@@ -12,7 +12,7 @@ async def test_iroh_node_start():
 
 @pytest.mark.asyncio
 async def test_default_author():
-    options = iroh.NodeOptions()
+    options = iroh.NodeOptions(gc_interval_millis=1000, blob_events=True)
     options.enable_docs = True
     node = await iroh.Iroh.memory_with_options(options)
     author = await node.authors().default()
