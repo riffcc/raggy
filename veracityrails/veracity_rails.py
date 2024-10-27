@@ -8,7 +8,11 @@ class VeracityRails:
         Create a veracity rail between two entities with a given weight.
         """
         # Placeholder implementation
-        return f"Rail created between {entity_a} and {entity_b} with weight {weight}"
+        return {
+            'entity_a': entity_a,
+            'entity_b': entity_b,
+            'weight': weight
+        }
 
     async def get_rail_info(self, doc):
         """
