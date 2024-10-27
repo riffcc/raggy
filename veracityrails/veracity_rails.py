@@ -1,3 +1,5 @@
+import iroh
+
 class VeracityRails:
     def __init__(self, node=None):
         self.node = node
