@@ -6,6 +6,7 @@
 * Use isort for sorting imports
 * All new code must have 80% or greater test coverage
 * All new code must have 80% or greater type checking coverage
+* NEVER EVER mock code, always implement or stub. Do not make mocks. They do not help.
 
 # Veracity rails
 * Do not overload the veracity rail concept.
