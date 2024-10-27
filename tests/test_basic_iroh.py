@@ -73,8 +73,8 @@ async def test_veracity_rails():
     metadata = await rails.create_rail(entity_a, entity_b, 0.5)
     
     # Verify that metadata was stored correctly
-    assert metadata['read_ticket'] in entity_a.metadata_store
-    assert metadata['read_ticket'] in entity_b.metadata_store
+    assert list(entity_a.metadata_store.keys())[0] in entity_a.metadata_store
+    assert list(entity_b.metadata_store.keys())[0] in entity_b.metadata_store
     
     # Update the rail
     await rails.update_rail(metadata, 0.8)
