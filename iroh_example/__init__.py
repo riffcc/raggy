@@ -1,3 +1,0 @@
-"""
-Example iroh project
-"""
