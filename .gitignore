@@ -3,3 +3,4 @@
 target/*
 test.out
 **/__pycache__/**
+project_content.txt
