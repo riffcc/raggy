@@ -6,6 +6,7 @@ async def test_iroh_boots():
     db = await RaggyDB.create()
     assert db is not None
     assert db.client is not None
+    assert hasattr(db.client, "docs")  # Verify docs are enabled
 
 async def test_doc_creation():
     """Test document creation and basic operations"""
@@ -55,4 +56,5 @@ async def test_doc_queries():
         assert doc is not None
         value = await db.get_value(name, "type")
         assert value == name
+
 
