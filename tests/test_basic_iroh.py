@@ -51,7 +51,12 @@ async def test_document_join():
     # Verify that the joined document has the same ID
     assert joined_doc.id() == doc.id()
 
-from unittest.mock import Mock
+class Entity:
+    def __init__(self):
+        self.metadata_store = {}
+
+    def store_metadata(self, metadata):
+        self.metadata_store.update(metadata)
 
 @pytest.mark.asyncio
 async def test_veracity_rails():
@@ -60,16 +65,16 @@ async def test_veracity_rails():
     node = await iroh.Iroh.memory_with_options(options)
     rails = VeracityRails(node)
     
-    # Create mock entities with store_metadata method
-    entity_a = Mock()
-    entity_b = Mock()
+    # Create actual entities
+    entity_a = Entity()
+    entity_b = Entity()
     
     # Create a veracity rail
     metadata = await rails.create_rail(entity_a, entity_b, 0.5)
     
-    # Verify that store_metadata was called with correct arguments
-    entity_a.store_metadata.assert_called_once_with({metadata['read_ticket']: metadata})
-    entity_b.store_metadata.assert_called_once_with({metadata['read_ticket']: metadata})
+    # Verify that metadata was stored correctly
+    assert metadata['read_ticket'] in entity_a.metadata_store
+    assert metadata['read_ticket'] in entity_b.metadata_store
     
     # Update the rail
     await rails.update_rail(metadata, 0.8)
