@@ -9,7 +9,6 @@ packages = [{include = "iroh_example"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 iroh = "0.27.0"
-packaging = "^23.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0"
