@@ -68,8 +68,8 @@ async def test_veracity_rails():
     metadata = await rails.create_rail(entity_a, entity_b, 0.5)
     
     # Verify that store_metadata was called with correct arguments
-    entity_a.store_metadata.assert_called_once_with(metadata['read_ticket'], metadata)
-    entity_b.store_metadata.assert_called_once_with(metadata['read_ticket'], metadata)
+    entity_a.store_metadata.assert_called_once_with({metadata['read_ticket']: metadata})
+    entity_b.store_metadata.assert_called_once_with({metadata['read_ticket']: metadata})
     
     # Update the rail
     await rails.update_rail(metadata, 0.8)
