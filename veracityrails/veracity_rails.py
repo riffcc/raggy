@@ -26,9 +26,7 @@ class VeracityRails:
         # Step 4: Get the CID of the VeracityRailDoc
         cid = doc.id()
 
-        # Step 5: Store the VeracityRailDoc's CID into the entity's EntityDoc
-        # This is a placeholder for storing the CID in the entity's document
-        # Assuming entity_a and entity_b have a method to store metadata
+        # Step 5: Store the VeracityRailDoc's CID into the entity's EntityDoc as a key-value pair
         entity_a.store_metadata(cid, metadata)
         entity_b.store_metadata(cid, metadata)
 
