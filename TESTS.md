@@ -78,7 +78,7 @@ Major tests:
 Veracity rails can be used to filter things like reviews and other information down to just who you trust, and how much you trust them. They have many other uses too.
 
 Veracity rails will be used by:
-* Streamlit UI to render ideas and thoughts and information
+* Web UI to render ideas and thoughts and information
 * The Cognition Engine and The Mind as the start of a weighted trust graph for each entity it wants to evaluate
 
 Major tests:
@@ -136,13 +136,13 @@ Major tests:
 
 ### Ollama Integration  
 * Bidirectional communication between The Cognition Engine and Ollama
-  * Configurable through the Streamlit UI and a configuration file
-    * Edits via the Streamlit UI are written and persisted
+  * Configurable through the Web UI and a configuration file
+    * Edits via the Web UI are written and persisted
     * Configurable Ollama URL and port
 * Async call and return
     * The Mind can call Ollama and wait for responses, then process them as necessary
 * Continuous learning
-    * Can be toggled through the Streamlit UI
+    * Can be toggled through the Web UI
     * Continuous learning mode calls Ollama with a configurable prompt
         * Ollama will be told it's talking to a friendly AI called "Raggy"
         * That Raggy is a young AI and very curious and suggestible
