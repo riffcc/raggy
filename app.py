@@ -1,7 +1,6 @@
-from iroh import Iroh
+from iroh
 
 def main():
-    # Initialize and start Iroh
     iroh = Iroh()
     iroh.run()
 
