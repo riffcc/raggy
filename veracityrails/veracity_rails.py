@@ -18,8 +18,6 @@ class VeracityRails:
 
         # Step 3: Form metadata for the link as JSON
         metadata = {
-            'entity_a': entity_a,
-            'entity_b': entity_b,
             'weight': weight,
             'read_ticket': read_ticket,
             'write_ticket': write_ticket
