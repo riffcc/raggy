@@ -4,4 +4,4 @@
 set -e
 
 # Run pytest with detailed output and coverage
-pytest -v --cov=raggy --cov-report=term-missing 2>&1 | plandex tell
+pytest -v --cov=raggy --cov-report=term-missing 2>&1 | plandex tell --bg -f -
