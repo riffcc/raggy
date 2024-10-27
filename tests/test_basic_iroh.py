@@ -49,3 +49,26 @@ async def test_document_join():
     
     # Verify that the joined document has the same ID
     assert joined_doc.id() == doc.id()
+
+@pytest.mark.asyncio
+async def test_veracity_rails():
+    options = iroh.NodeOptions(gc_interval_millis=1000, blob_events=False)
+    options.enable_docs = True
+    node = await iroh.Iroh.memory_with_options(options)
+    rails = VeracityRails(node)
+    
+    # Create a veracity rail
+    doc = await rails.create_rail("entity_a", "entity_b", 0.5)
+    
+    # Verify rail creation
+    entity_a, entity_b, weight = await rails.get_rail_info(doc)
+    assert entity_a == "entity_a"
+    assert entity_b == "entity_b"
+    assert weight == 0.5
+    
+    # Update the rail
+    await rails.update_rail(doc, 0.8)
+    
+    # Verify rail update
+    _, _, new_weight = await rails.get_rail_info(doc)
+    assert new_weight == 0.8
