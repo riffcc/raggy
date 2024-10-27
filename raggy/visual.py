@@ -72,8 +72,11 @@ class VisualProcessor:
                     # Create veracity rail for pattern relationship
                     await self.node.veracity.create_rail(
                         pattern2.id,
-                        semantic_closeness=weight,
-                        physical_proximity=1 - spatial_dist/100
+                        dimensions={
+                            "spatial_proximity": 1 - spatial_dist/100,
+                            "color_similarity": color_sim,
+                            "pattern_weight": weight
+                        }
                     )
                     
     def _spatial_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> float:
@@ -91,3 +94,4 @@ class VisualProcessor:
                 b"patterns",
                 str(patterns_data).encode()
             )
+

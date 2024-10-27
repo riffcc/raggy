@@ -4,6 +4,7 @@ import asyncio
 import iroh
 import streamlit as st
 from .events import EventBus
+from .node import RaggyNode
 
 @dataclass
 class RaggyConfig:
@@ -18,18 +19,20 @@ class Raggy:
         self.iroh = None
         self.state: Dict[str, Any] = {}
         self.events = EventBus()
+        self.node = None
         
     @classmethod
     async def create(cls, config: Optional[RaggyConfig] = None) -> 'Raggy':
         self = cls(config)
-        self.iroh = await iroh.IrohClient.create()
+        self.node = RaggyNode("core", self.events)
+        await self.node.start()
         return self
         
     async def start(self):
         """Start all Raggy components"""
-        if not self.iroh:
-            self.iroh = await iroh.IrohClient.create()
+        if not self.node:
+            self.node = RaggyNode("core", self.events)
+        await self.node.start()
             
     async def emit(self, event_name: str, data: Any):
         await self.events.emit(event_name, data, "core")
-

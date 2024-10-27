@@ -1,11 +1,13 @@
 import pytest
-from raggy import Raggy, RaggyConfig
+from raggy.core import Raggy, RaggyConfig
+from raggy.events import EventBus
 
 async def test_raggy_creation():
     raggy = await Raggy.create()
     assert raggy is not None
     assert isinstance(raggy.config, RaggyConfig)
-    assert raggy.iroh is not None
+    assert raggy.node is not None
+    assert isinstance(raggy.events, EventBus)
 
 async def test_raggy_custom_config():
     config = RaggyConfig(iroh_port=8081, debug=True)

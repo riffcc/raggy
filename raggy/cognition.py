@@ -45,8 +45,7 @@ class CognitionEngine:
                     # Use veracity rails to weight connections
                     rail = self.node.veracity.get_rail(other_id)
                     if rail:
-                        weight = rail.total_weight()
-                        thought.connections[other_id] = weight
+                        thought.connections[other_id] = rail.total_weight()
                         
     async def _optimize_entropy(self):
         for thought in self.thoughts.values():
@@ -72,3 +71,4 @@ class CognitionEngine:
                 b"thoughts",
                 str(thoughts_data).encode()
             )
+
