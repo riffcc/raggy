@@ -12,21 +12,24 @@ class VeracityRails:
         # Step 1: Create a document in Iroh representing the veracity rail
         doc = await self.node.docs().create()
 
-        # Step 2: Create tickets for writing and reading from that document
+        # Step 2: Create a ticket for writing to that document and store it in TicketWriteDoc for your node
         write_ticket = await doc.share(iroh.ShareMode.WRITE, iroh.AddrInfoOptions.ID)
         read_ticket = await doc.share(iroh.ShareMode.READ, iroh.AddrInfoOptions.ID)
 
-        # Step 3: Form metadata for the link as JSON
+        # Step 3: Create a ticket for reading from that document and store it in TicketReadDoc for your node
         metadata = {
             'weight': weight,
             'read_ticket': read_ticket,
             'write_ticket': write_ticket
         }
 
-        # Step 4: Get the CID of the VeracityRailDoc
+        # Step 4: Form metadata for the link as JSON
         cid = doc.id()
 
-        # Step 5: Store the VeracityRailDoc's CID into the entity's EntityDoc as a key-value pair
+        # Step 5: Get the CID of the VeracityRailDoc
+        # Step 6: Store the VeracityRailDoc's CID into the entity's EntityDoc as a key-value pair
+        self.node.docs().TicketWriteDoc.store_metadata({cid: write_ticket})
+        self.node.docs().TicketReadDoc.store_metadata({cid: read_ticket})
         entity_a.store_metadata({cid: metadata})
         entity_b.store_metadata({cid: metadata})
 
