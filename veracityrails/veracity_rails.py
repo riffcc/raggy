@@ -28,16 +28,12 @@ class VeracityRails:
 
         # Step 5: Get the CID of the VeracityRailDoc
         # Step 6: Store the VeracityRailDoc's CID into the entity's EntityDoc as a key-value pair
-        # Assuming TicketWriteDoc and TicketReadDoc are documents that need to be created or accessed
-        ticket_write_doc = await self.node.docs().create()
-        ticket_read_doc = await self.node.docs().create()
-        
-        # Assuming we need to store metadata in a different way
-        # Store metadata in a dictionary or another suitable method
-        ticket_write_doc.metadata = {cid: write_ticket}
-        ticket_read_doc.metadata = {cid: read_ticket}
-        entity_a.store_metadata({cid: metadata})
-        entity_b.store_metadata({cid: metadata})
+        # Store the write and read tickets directly in the metadata
+        metadata['write_ticket'] = write_ticket
+        metadata['read_ticket'] = read_ticket
+        # Store the metadata in the entities
+        entity_a.store_metadata(metadata)
+        entity_b.store_metadata(metadata)
 
         return metadata
 
