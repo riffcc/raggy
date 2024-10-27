@@ -1,10 +1,9 @@
 # Tests
 
 ## Setup
-Codebase: Python3 + Streamlit + Iroh
+Codebase: Python3 + Iroh
 Features:
-* Iroh acts as a graph database
-* Streamlit provides a UI
+* Iroh acts as a persistence layer
 * Cooperation Engine provides a way to allow diverse thoughts and ideas to be explored in parallel
 * Defederation allows for prevention of Sybil behaviours
 * Reality Layer allows for the creation of simulated realities
@@ -12,9 +11,6 @@ Features:
 
 ### Basics
 ## Initial tests
-* Streamlit boots and works correctly
-    * We will use Streamlit inside Python, not via `streamlit run`
-* Streamlit renders correctly and is not a blank white page
 * Iroh boots and works correctly
     * Docs are enabled
     * Docs can be
