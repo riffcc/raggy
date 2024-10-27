@@ -3,5 +3,10 @@ class VeracityRails:
         self.node = node
         pass
 
-    def example_method(self):
+    async def create_rail(self, entity_a, entity_b, weight):
+        """
+        Create a veracity rail between two entities with a given weight.
+        """
+        # Placeholder implementation
+        return f"Rail created between {entity_a} and {entity_b} with weight {weight}"
         return "This is an example method in VeracityRails."
