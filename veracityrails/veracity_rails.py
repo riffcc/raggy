@@ -30,4 +30,7 @@ class VeracityRails:
         # Update the weight in the document
         doc['weight'] = new_weight
         return doc
+
+    def example_method(self):
+        return "This is an example method in VeracityRails."
         return "This is an example method in VeracityRails."
