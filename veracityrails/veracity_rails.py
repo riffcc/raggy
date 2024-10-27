@@ -1,5 +1,6 @@
 class VeracityRails:
-    def __init__(self):
+    def __init__(self, node=None):
+        self.node = node
         pass
 
     def example_method(self):
