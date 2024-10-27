@@ -23,5 +23,11 @@ class VeracityRails:
         # This is a placeholder implementation
         return doc.get('entity_a'), doc.get('entity_b'), doc.get('weight')
 
-    def example_method(self):
+    async def update_rail(self, doc, new_weight):
+        """
+        Update the weight of an existing veracity rail.
+        """
+        # Update the weight in the document
+        doc['weight'] = new_weight
+        return doc
         return "This is an example method in VeracityRails."
