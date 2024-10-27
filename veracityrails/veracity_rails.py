@@ -32,8 +32,9 @@ class VeracityRails:
         ticket_write_doc = await self.node.docs().create()
         ticket_read_doc = await self.node.docs().create()
         
-        ticket_write_doc.store_metadata({cid: write_ticket})
-        ticket_read_doc.store_metadata({cid: read_ticket})
+        # Assuming we need to store metadata in a different way
+        await ticket_write_doc.set_metadata({cid: write_ticket})
+        await ticket_read_doc.set_metadata({cid: read_ticket})
         entity_a.store_metadata({cid: metadata})
         entity_b.store_metadata({cid: metadata})
 
