@@ -3,7 +3,6 @@ import asyncio
 
 async def main():
     try:
-
         # Enable docs
         options = iroh.NodeOptions(gc_interval_millis=1000, blob_events=False)
         options.enable_docs = True
@@ -18,8 +17,14 @@ async def main():
         print(f"Default author: {author}")
 
         # Attempt to create a document
-        doc = await node.docs().create()
-        print(f"Created doc: {doc.id()}")
+        main_doc = await node.docs().create()
+        ticket_write_doc = await node.docs().create()
+
+        # Sync documents
+        await node.sync_document(main_doc)
+        await node.sync_document(ticket_write_doc)
+
+        print("Iroh node initialized and documents synced.")
 
     except iroh.iroh_ffi.IrohError as e:
         print(f"Encountered an Iroh error: {e}")

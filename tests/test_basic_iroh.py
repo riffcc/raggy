@@ -24,5 +24,14 @@ async def test_document_creation():
     options = iroh.NodeOptions(gc_interval_millis=1000, blob_events=False)
     options.enable_docs = True
     node = await iroh.Iroh.memory_with_options(options)
-    doc = await node.docs().create()
-    assert doc.id() is not None
+    main_doc = await node.docs().create()
+    ticket_write_doc = await node.docs().create()
+
+    assert main_doc.id() is not None
+    assert ticket_write_doc.id() is not None
+
+    await node.sync_document(main_doc)
+    await node.sync_document(ticket_write_doc)
+
+    assert node.is_document_synced(main_doc)
+    assert node.is_document_synced(ticket_write_doc)
