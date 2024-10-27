@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iroh-example"
+version = "0.1.0"
+authors = [
+  { name = "Your Name", email = "your.email@example.com" },
+]
+description = "An example project using iroh"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "iroh==0.27.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
