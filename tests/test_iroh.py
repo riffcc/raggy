@@ -1,5 +1,5 @@
 import pytest
-from ..raggy_py.iroh import IrohNode
+from raggy_py.iroh import IrohNode
 
 def test_create_main_doc():
     """Test if a node can create a MainDoc and keep it filled with necessary data."""
