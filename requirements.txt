@@ -1,6 +1,3 @@
-iroh
-pytest
-panel
 iroh==0.27.0
 pytest
 pytest-asyncio
