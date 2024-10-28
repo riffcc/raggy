@@ -1,6 +1,24 @@
 import iroh
 import asyncio
 
+# TODO:
+# * Iroh
+#   * Docs
+#     * Creating a doc
+#     * Joining a doc
+#     * Sharing a doc
+#   * Nodes
+#     * Creating a node
+#     * Joining a node to a Defederation network
+#
+# * Entities
+#   * Creating an entity
+#   * Updating an entity
+#   * Querying an entity
+#
+# * Veracity rails
+#   * Creating a veracity rail
+
 async def main():
     try:
         # Create in memory iroh node
