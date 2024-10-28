@@ -17,6 +17,8 @@ fi
 # Find files, exclude unwanted patterns, and append paths and filtered contents
 find . -type f \
   ! -path "./__pycache__/*" ! -name "*.pyc" \
+  ! -path "./LICENSE" \
+  ! -path "./.aider.*" \
   ! -path "./aider_*" ! -path "./target/*" ! -path "./.pytest_cache/*" \
   ! -path "./.git/*" ! -path "./.coverage" ! -path "./$output_file" \
   ! -name "*.db" ! -name "*.lock" ! -name ".aider.chat.history.md" \
