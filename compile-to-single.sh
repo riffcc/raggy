@@ -11,7 +11,7 @@ echo "Generating $output_file with file paths and contents..."
 if [[ "$1" == "rust" ]]; then
   rust_exclusions=()   # Includes .rs files if "rust" flag is set
 else
-  rust_exclusions=(-path "./raggy-rs/*" -o -name "*.rs")  # Excludes Rust files otherwise
+  rust_exclusions=(-name "*.rs" -o -path "./raggy-rs/*")  # Excludes Rust files otherwise
 fi
 
 # Find files, exclude unwanted patterns, and append paths and filtered contents

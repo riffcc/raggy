@@ -1,12 +1,8 @@
 # Unbreakable rules
-* All code must be written in Python3
-* pip3 is the package manager, manage requirements.txt carefully
-* Use pytest for testing
-* Use black for formatting
-* Use isort for sorting imports
+* All code must be written in Rust
 * All new code must have 80% or greater test coverage
 * All new code must have 80% or greater type checking coverage
-* NEVER EVER mock code, always implement or stub. Do not make mocks. They do not help.
+* NEVER EVER mock code, always implement or stub.
 
 # Veracity rails
 * Do not overload the veracity rail concept.
