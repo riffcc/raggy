@@ -1,7 +1,7 @@
 use clap::Parser;
 use futures::StreamExt;
 use libp2p::{
-    gossipsub::{self, IdentTopic, MessageAuthenticity, ValidationMode},
+    gossipsub::{self, IdentTopic, MessageAuthenticity},
     identify,
     identity,
     kad::{store::MemoryStore, Behaviour as KademliaBehaviour, Config as KademliaConfig, Event as KademliaEvent, QueryResult, RecordKey},
@@ -119,7 +119,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), local_peer_id)?;
 
     // Set up GossipSub
-    let gossipsub_config = gossipsub::Config::default();
+    let gossipsub_config = gossipsub::ConfigBuilder::default()
+        .heartbeat_interval(Duration::from_secs(1))
+        .build()
+        .expect("Valid config");
+
     let mut gossipsub = gossipsub::Behaviour::new(
         MessageAuthenticity::Signed(local_key),
         gossipsub_config,
@@ -181,7 +185,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             // Extract peer ID from the multiaddr
                             if let Some(Protocol::P2p(hash)) = remote.iter().find(|p| matches!(p, Protocol::P2p(_))) {
                                 let peer_id = PeerId::from(hash);
-                                swarm.behaviour_mut().kademlia.add_address(&peer_id, remote);
+                                swarm.behaviour_mut().kademlia.add_address(&peer_id, remote.clone());
+                                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                             }
                         }
                         // Start bootstrapping process
@@ -199,6 +204,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             MyBehaviourEvent::Kademlia(kad_event) => match kad_event {
                                 KademliaEvent::RoutingUpdated { peer, .. } => {
                                     println!("Routing table updated for peer: {peer}");
+                                    // Add the peer to GossipSub as well
+                                    swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
                                 }
                                 KademliaEvent::OutboundQueryProgressed { result, .. } => {
                                     match result {
@@ -212,6 +219,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                         }
                                         QueryResult::Bootstrap(Ok(ok)) => {
                                             println!("Bootstrap completed with peer: {}", ok.peer);
+                                            // Add bootstrap peer to GossipSub
+                                            swarm.behaviour_mut().gossipsub.add_explicit_peer(&ok.peer);
                                         }
                                         _ => println!("Query progressed: {result:?}"),
                                     }
@@ -228,6 +237,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                     for addr in info.listen_addrs {
                                         swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
                                     }
+                                    // Add the peer to GossipSub
+                                    swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                                 }
                             }
                             MyBehaviourEvent::Mdns(event) => {
@@ -236,6 +247,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                         for (peer_id, multiaddr) in list {
                                             println!("mDNS discovered a new peer: {peer_id}");
                                             swarm.behaviour_mut().kademlia.add_address(&peer_id, multiaddr);
+                                            // Add the peer to GossipSub
+                                            swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                                         }
                                     }
                                     mdns::Event::Expired(list) => {
