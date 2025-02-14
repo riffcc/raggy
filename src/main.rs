@@ -93,12 +93,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let local_peer_id = PeerId::from(local_key.public());
     println!("Local peer id: {local_peer_id}");
 
-    // Create a transport
-    let transport = libp2p::tcp::tokio::Transport::default()
-        .upgrade(libp2p::core::upgrade::Version::V1)
-        .authenticate(libp2p::noise::Config::new(&local_key).unwrap())
-        .multiplex(libp2p::yamux::Config::default())
-        .boxed();
+    // Create transport with TCP and QUIC support
+    let transport = {
+        let tcp = libp2p::tcp::tokio::Transport::new(libp2p::tcp::Config::default())
+            .upgrade(libp2p::core::upgrade::Version::V1)
+            .authenticate(libp2p::noise::Config::new(&local_key).unwrap())
+            .multiplex(libp2p::yamux::Config::default())
+            .map(|(peer_id, muxer), _| (peer_id, libp2p::core::muxing::StreamMuxerBox::new(muxer)));
+
+        let quic = libp2p::quic::tokio::Transport::new(libp2p::quic::Config::new(&local_key))
+            .map(|(peer_id, conn), _| (peer_id, libp2p::core::muxing::StreamMuxerBox::new(conn)));
+
+        // Combine the transports and map the Either type to a single type
+        libp2p::core::transport::OrTransport::new(tcp, quic)
+            .map(|either, _| match either {
+                futures::future::Either::Left((peer_id, muxer)) => (peer_id, muxer),
+                futures::future::Either::Right((peer_id, muxer)) => (peer_id, muxer),
+            })
+            .boxed()
+    };
 
     // Create the identify service
     let identify = identify::Behaviour::new(identify::Config::new(
@@ -152,8 +165,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Config::with_tokio_executor(),
     );
 
-    // Listen on all interfaces and the specified port (0 means random port)
-    swarm.listen_on(format!("/ip4/0.0.0.0/tcp/{}", cli.port).parse()?)?;
+    // Listen on multiple protocols for better connectivity
+    swarm.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
+    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
     // Bootstrap with public DHT nodes
     let bootstrap_nodes = vec![
