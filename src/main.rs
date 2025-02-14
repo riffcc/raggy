@@ -1,6 +1,7 @@
 use clap::Parser;
 use futures::StreamExt;
 use libp2p::{
+    gossipsub::{self, IdentTopic, MessageAuthenticity, ValidationMode},
     identify,
     identity,
     kad::{store::MemoryStore, Behaviour as KademliaBehaviour, Config as KademliaConfig, Event as KademliaEvent, QueryResult, RecordKey},
@@ -16,21 +17,29 @@ use libp2p::{
 use std::{error::Error, time::Duration};
 use tokio::time::interval;
 
+const GOSSIP_TOPIC: &str = "raggy-chat";
+const GOSSIP_INTERVAL: u64 = 10; // seconds
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Port to listen on
     #[arg(short, long, default_value_t = 0)]
     port: u16,
+
+    /// Node name
+    #[arg(short, long, default_value = "anonymous")]
+    name: String,
 }
 
 #[derive(NetworkBehaviour)]
-#[behaviour(to_swarm = "MyBehaviourEvent")]
+#[behaviour(out_event = "MyBehaviourEvent")]
 struct MyBehaviour {
     ping: ping::Behaviour,
     identify: identify::Behaviour,
     kademlia: KademliaBehaviour<MemoryStore>,
     mdns: mdns::tokio::Behaviour,
+    gossipsub: gossipsub::Behaviour,
 }
 
 #[derive(Debug)]
@@ -39,6 +48,7 @@ enum MyBehaviourEvent {
     Identify(identify::Event),
     Kademlia(KademliaEvent),
     Mdns(mdns::Event),
+    Gossipsub(gossipsub::Event),
 }
 
 impl From<ping::Event> for MyBehaviourEvent {
@@ -62,6 +72,12 @@ impl From<KademliaEvent> for MyBehaviourEvent {
 impl From<mdns::Event> for MyBehaviourEvent {
     fn from(event: mdns::Event) -> Self {
         MyBehaviourEvent::Mdns(event)
+    }
+}
+
+impl From<gossipsub::Event> for MyBehaviourEvent {
+    fn from(event: gossipsub::Event) -> Self {
+        MyBehaviourEvent::Gossipsub(event)
     }
 }
 
@@ -102,12 +118,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Set up mDNS for local peer discovery
     let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), local_peer_id)?;
 
+    // Set up GossipSub
+    let gossipsub_config = gossipsub::Config::default();
+    let mut gossipsub = gossipsub::Behaviour::new(
+        MessageAuthenticity::Signed(local_key),
+        gossipsub_config,
+    )?;
+
+    // Create a topic
+    let topic = IdentTopic::new(GOSSIP_TOPIC);
+    
+    // Subscribe to the topic
+    gossipsub.subscribe(&topic)?;
+
     // Create the network behaviour
     let behaviour = MyBehaviour {
         ping: ping::Behaviour::new(ping::Config::new()),
         identify,
         kademlia,
         mdns,
+        gossipsub,
     };
 
     // Create a Swarm to manage peers and events
@@ -133,6 +163,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Set up periodic DHT peer search interval
     let mut search_interval = interval(Duration::from_secs(30));
+
+    // Set up periodic message broadcast interval
+    let mut broadcast_interval = interval(Duration::from_secs(GOSSIP_INTERVAL));
 
     // Main event loop
     loop {
@@ -169,7 +202,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 }
                                 KademliaEvent::OutboundQueryProgressed { result, .. } => {
                                     match result {
-                                        QueryResult::GetProviders(Ok(ok)) => {
+                                        QueryResult::GetProviders(Ok(_)) => {
                                             println!("Found peers in DHT");
                                             // The peers will be automatically connected to if we have their addresses
                                             // from the identify protocol
@@ -212,6 +245,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                     }
                                 }
                             }
+                            MyBehaviourEvent::Gossipsub(gossip_event) => {
+                                if let gossipsub::Event::Message {
+                                    propagation_source: peer_id,
+                                    message_id: id,
+                                    message,
+                                } = gossip_event
+                                {
+                                    println!(
+                                        "Got message: '{}' with id: {} from peer: {:?}",
+                                        String::from_utf8_lossy(&message.data),
+                                        id,
+                                        peer_id
+                                    );
+                                }
+                            }
                             MyBehaviourEvent::Ping(event) => {
                                 println!("Ping event: {event:?}");
                             }
@@ -224,6 +272,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 // Periodically search for other peers
                 println!("Searching for peers in DHT...");
                 swarm.behaviour_mut().kademlia.get_providers(record_key.clone());
+            }
+            _ = broadcast_interval.tick() => {
+                // Broadcast a message to all peers
+                let message = format!("HELO FROM {}", cli.name);
+                if let Err(e) = swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .publish(topic.clone(), message.as_bytes())
+                {
+                    println!("Failed to publish message: {e}");
+                }
             }
         }
     }
