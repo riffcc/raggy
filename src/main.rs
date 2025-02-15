@@ -16,6 +16,7 @@ use libp2p::{
 };
 use std::{error::Error, time::Duration};
 use tokio::time::interval;
+use public_ip;
 
 const GOSSIP_TOPIC: &str = "raggy-chat";
 const GOSSIP_INTERVAL: u64 = 10; // seconds
@@ -87,6 +88,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Parse command line arguments
     let cli = Cli::parse();
+    
+    // Use the provided port or default to 33333 if 0
+    let listen_port = if cli.port == 0 { 33333 } else { cli.port };
 
     // Create a random PeerId
     let local_key = identity::Keypair::generate_ed25519();
@@ -117,14 +121,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let identify = identify::Behaviour::new(identify::Config::new(
         "/raggy/1.0.0".to_string(),
         local_key.public(),
-    ));
+    ).with_agent_version(format!("raggy/{}", env!("CARGO_PKG_VERSION"))));
 
-    // Set up Kademlia DHT
+    // Set up Kademlia DHT with more aggressive settings
     let mut cfg = KademliaConfig::default();
     cfg.set_query_timeout(Duration::from_secs(5 * 60));
-    // Enable record publishing
     cfg.set_record_ttl(Some(Duration::from_secs(60)));
     cfg.set_publication_interval(Some(Duration::from_secs(30)));
+    // Use NonZeroUsize for replication factor
+    cfg.set_replication_factor(std::num::NonZeroUsize::new(3).unwrap());
     let store = MemoryStore::new(local_peer_id);
     let kademlia = KademliaBehaviour::with_config(local_peer_id, store, cfg);
 
@@ -165,9 +170,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Config::with_tokio_executor(),
     );
 
-    // Listen on multiple protocols for better connectivity
-    swarm.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
-    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+    // Listen on specific ports for better connectivity
+    swarm.listen_on(format!("/ip4/0.0.0.0/tcp/{listen_port}").parse()?)?;
+    swarm.listen_on(format!("/ip4/0.0.0.0/udp/{listen_port}/quic-v1").parse()?)?;
 
     // Bootstrap with public DHT nodes
     let bootstrap_nodes = vec![
@@ -184,6 +189,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Set up periodic message broadcast interval
     let mut broadcast_interval = interval(Duration::from_secs(GOSSIP_INTERVAL));
+
+    // After setting up swarm listening...
+    
+    // Announce our external addresses if we know them
+    if let Some(public_ip) = public_ip::addr().await {
+        let tcp_addr = format!("/ip4/{}/tcp/{}", public_ip, listen_port).parse()?;
+        let quic_addr = format!("/ip4/{}/udp/{}/quic-v1", public_ip, listen_port).parse()?;
+        swarm.add_external_address(tcp_addr);
+        swarm.add_external_address(quic_addr);
+    }
 
     // Main event loop
     loop {
