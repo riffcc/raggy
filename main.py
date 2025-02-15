@@ -64,7 +64,7 @@ import pytest
 #   * Walking the graph to the most entropic state
 #   * Forming a sentence from the most entropic state
 #
-# This is a new kind of LLM - one that is not only queryable, but is also learnable.
+# This is a new kind of LLM - one that is not only queryable, but is also teachable.
 
 
 async def main():
