@@ -14,9 +14,8 @@ use libp2p::{
     Swarm,
     Transport,
 };
-use std::{error::Error, time::Duration};
-use tokio::time::interval;
-use public_ip;
+use std::{error::Error, time::Duration, collections::HashSet, sync::Arc};
+use tokio::{time::interval, sync::Mutex};
 
 const GOSSIP_TOPIC: &str = "raggy-chat";
 const GOSSIP_INTERVAL: u64 = 10; // seconds
@@ -83,14 +82,23 @@ impl From<gossipsub::Event> for MyBehaviourEvent {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-
-    // Parse command line arguments
-    let cli = Cli::parse();
     
-    // Use the provided port or default to 33333 if 0
-    let listen_port = if cli.port == 0 { 33333 } else { cli.port };
+    // Use empty callback for the main binary
+    let message_callback = Arc::new(Mutex::new(HashSet::new()));
+    let args: Vec<String> = std::env::args().collect();
+    
+    raggy_p2p::run_node(args, message_callback).await
+}
+
+// New function that accepts a message callback for testing
+pub async fn run_node(
+    args: Vec<String>,
+    message_callback: Arc<Mutex<HashSet<String>>>,
+) -> Result<(), Box<dyn Error>> {
+    // Parse command line arguments using the vector
+    let cli = Cli::try_parse_from(args)?;
 
     // Create a random PeerId
     let local_key = identity::Keypair::generate_ed25519();
@@ -170,25 +178,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Config::with_tokio_executor(),
     );
 
-    // Listen on specific ports for better connectivity
-    swarm.listen_on(format!("/ip4/0.0.0.0/tcp/{listen_port}").parse()?)?;
-    swarm.listen_on(format!("/ip4/0.0.0.0/udp/{listen_port}/quic-v1").parse()?)?;
+    // Listen on multiple protocols for better connectivity
+    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+    swarm.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
+    
+    // Also try to listen on IPv6 if available
+    if let Ok(_) = swarm.listen_on("/ip6/::/tcp/0".parse()?) {
+        println!("Listening on IPv6 TCP");
+    }
+    if let Ok(_) = swarm.listen_on("/ip6/::/udp/0/quic-v1".parse()?) {
+        println!("Listening on IPv6 QUIC");
+    }
 
     // Bootstrap with public DHT nodes
     let bootstrap_nodes = vec![
         "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
         "/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
         "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+        // Add more bootstrap nodes from IPFS
+        "/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+        "/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
     ];
 
     // Create a record key for our namespace
     let record_key = RecordKey::new(&format!("/raggy/peers/{}", local_peer_id));
 
-    // Set up periodic DHT peer search interval
-    let mut search_interval = interval(Duration::from_secs(30));
+    // Set up more frequent DHT peer search interval
+    let mut search_interval = interval(Duration::from_secs(15));  // More frequent searches
 
     // Set up periodic message broadcast interval
     let mut broadcast_interval = interval(Duration::from_secs(GOSSIP_INTERVAL));
+
+    // Set up periodic bootstrap interval
+    let mut bootstrap_interval = interval(Duration::from_secs(300));  // Rebootstrap every 5 minutes
 
     // After setting up swarm listening...
     
@@ -211,11 +233,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         for addr in &bootstrap_nodes {
                             let remote: Multiaddr = addr.parse()?;
                             println!("Dialing bootstrap node: {remote}");
-                            // Extract peer ID from the multiaddr
                             if let Some(Protocol::P2p(hash)) = remote.iter().find(|p| matches!(p, Protocol::P2p(_))) {
                                 let peer_id = PeerId::from(hash);
                                 swarm.behaviour_mut().kademlia.add_address(&peer_id, remote.clone());
                                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                                // Actively try to dial the bootstrap node
+                                if let Err(e) = swarm.dial(remote.clone()) {
+                                    println!("Failed to dial bootstrap node {}: {}", remote, e);
+                                }
                             }
                         }
                         // Start bootstrapping process
@@ -238,10 +263,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 }
                                 KademliaEvent::OutboundQueryProgressed { result, .. } => {
                                     match result {
-                                        QueryResult::GetProviders(Ok(_)) => {
-                                            println!("Found peers in DHT");
-                                            // The peers will be automatically connected to if we have their addresses
-                                            // from the identify protocol
+                                        QueryResult::GetProviders(Ok(ok)) => {
+                                            match ok {
+                                                libp2p::kad::GetProvidersOk::FoundProviders { providers, .. } => {
+                                                    println!("Found {} providers in DHT", providers.len());
+                                                    for peer in providers {
+                                                        println!("Attempting to connect to provider: {}", peer);
+                                                        swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
+                                                        if let Err(e) = swarm.dial(peer) {
+                                                            println!("Failed to dial peer {}: {}", peer, e);
+                                                        }
+                                                    }
+                                                }
+                                                libp2p::kad::GetProvidersOk::FinishedWithNoAdditionalRecord { closest_peers } => {
+                                                    println!("No providers found, but got {} closest peers", closest_peers.len());
+                                                    for peer in closest_peers {
+                                                        println!("Attempting to connect to closest peer: {}", peer);
+                                                        swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
+                                                        if let Err(e) = swarm.dial(peer) {
+                                                            println!("Failed to dial peer {}: {}", peer, e);
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                         QueryResult::StartProviding(Ok(ok)) => {
                                             println!("Successfully started providing record: {ok:?}");
@@ -294,12 +338,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                     message,
                                 } = gossip_event
                                 {
+                                    let msg_str = String::from_utf8_lossy(&message.data).to_string();
                                     println!(
                                         "Got message: '{}' with id: {} from peer: {:?}",
-                                        String::from_utf8_lossy(&message.data),
+                                        msg_str,
                                         id,
                                         peer_id
                                     );
+                                    // Store message in callback for testing
+                                    message_callback.lock().await.insert(msg_str);
                                 }
                             }
                             MyBehaviourEvent::Ping(event) => {
@@ -311,12 +358,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
             _ = search_interval.tick() => {
-                // Periodically search for other peers
                 println!("Searching for peers in DHT...");
+                // Try both get_providers and get_closest_peers for better discovery
                 swarm.behaviour_mut().kademlia.get_providers(record_key.clone());
+                swarm.behaviour_mut().kademlia.get_closest_peers(local_peer_id);
+            }
+            _ = bootstrap_interval.tick() => {
+                println!("Rebootstrapping DHT...");
+                if let Err(e) = swarm.behaviour_mut().kademlia.bootstrap() {
+                    println!("Failed to rebootstrap DHT: {e}");
+                }
             }
             _ = broadcast_interval.tick() => {
-                // Broadcast a message to all peers
                 let message = format!("HELO FROM {}", cli.name);
                 if let Err(e) = swarm
                     .behaviour_mut()
