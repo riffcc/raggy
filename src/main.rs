@@ -14,7 +14,7 @@ use libp2p::{
     Swarm,
     Transport,
 };
-use std::{error::Error, time::Duration, collections::HashSet, sync::Arc};
+use std::{error::Error, time::Duration, collections::HashSet, sync::Arc, hash::{Hash, Hasher, DefaultHasher}};
 use tokio::{time::interval, sync::Mutex};
 
 const GOSSIP_TOPIC: &str = "raggy-chat";
@@ -144,9 +144,21 @@ pub async fn run_node(
     // Set up mDNS for local peer discovery
     let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), local_peer_id)?;
 
-    // Set up GossipSub
+    // Set up GossipSub with more lenient settings
     let gossipsub_config = gossipsub::ConfigBuilder::default()
         .heartbeat_interval(Duration::from_secs(1))
+        .validation_mode(gossipsub::ValidationMode::Permissive) // Be more permissive about message validation
+        .message_id_fn(|message: &gossipsub::Message| {         // Content-address messages
+            let mut s = DefaultHasher::new();
+            message.data.hash(&mut s);
+            gossipsub::MessageId::from(s.finish().to_string())
+        })
+        .mesh_n_low(1)           // Lower mesh expectations
+        .mesh_n(3)               // Aim for 3 peers in mesh
+        .mesh_n_high(5)          // Allow up to 5 peers in mesh
+        .gossip_lazy(1)          // Require fewer peers for gossip
+        .history_length(10)      // Keep more message history
+        .history_gossip(3)       // Gossip more history
         .build()
         .expect("Valid config");
 
