@@ -178,9 +178,13 @@ pub async fn run_node(
         Config::with_tokio_executor(),
     );
 
+    // Track our listening ports
+    let mut tcp_port = None;
+    let mut quic_port = None;
+
     // Listen on multiple protocols for better connectivity
-    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
-    swarm.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
+    swarm.listen_on(format!("/ip4/0.0.0.0/tcp/{}", cli.port).parse()?)?;
+    swarm.listen_on(format!("/ip4/0.0.0.0/udp/{}/quic-v1", cli.port).parse()?)?;
     
     // Also try to listen on IPv6 if available
     if let Ok(_) = swarm.listen_on("/ip6/::/tcp/0".parse()?) {
@@ -212,16 +216,6 @@ pub async fn run_node(
     // Set up periodic bootstrap interval
     let mut bootstrap_interval = interval(Duration::from_secs(300));  // Rebootstrap every 5 minutes
 
-    // After setting up swarm listening...
-    
-    // Announce our external addresses if we know them
-    if let Some(public_ip) = public_ip::addr().await {
-        let tcp_addr = format!("/ip4/{}/tcp/{}", public_ip, listen_port).parse()?;
-        let quic_addr = format!("/ip4/{}/udp/{}/quic-v1", public_ip, listen_port).parse()?;
-        swarm.add_external_address(tcp_addr);
-        swarm.add_external_address(quic_addr);
-    }
-
     // Main event loop
     loop {
         tokio::select! {
@@ -229,6 +223,39 @@ pub async fn run_node(
                 match event {
                     SwarmEvent::NewListenAddr { address, .. } => {
                         println!("Listening on {address:?}");
+                        
+                        // Track ports from new listen addresses
+                        for protocol in address.iter() {
+                            match protocol {
+                                Protocol::Tcp(port) => {
+                                    tcp_port = Some(port);
+                                }
+                                Protocol::Udp(port) => {
+                                    if address.iter().any(|p| matches!(p, Protocol::QuicV1)) {
+                                        quic_port = Some(port);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        // Try to announce our external addresses if we have a public IP
+                        if let Some(public_ip) = public_ip::addr().await {
+                            println!("Public IP detected: {}", public_ip);
+                            
+                            if let Some(port) = tcp_port {
+                                let tcp_addr = format!("/ip4/{}/tcp/{}", public_ip, port).parse()?;
+                                println!("Adding external TCP address: {}", tcp_addr);
+                                swarm.add_external_address(tcp_addr);
+                            }
+                            
+                            if let Some(port) = quic_port {
+                                let quic_addr = format!("/ip4/{}/udp/{}/quic-v1", public_ip, port).parse()?;
+                                println!("Adding external QUIC address: {}", quic_addr);
+                                swarm.add_external_address(quic_addr);
+                            }
+                        }
+
                         // After we're listening, connect to bootstrap nodes
                         for addr in &bootstrap_nodes {
                             let remote: Multiaddr = addr.parse()?;
