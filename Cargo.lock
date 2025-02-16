@@ -2193,12 +2193,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
 
 [[package]]
-<<<<<<< HEAD
-name = "matches"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
-=======
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2206,7 +2200,6 @@ checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
  "regex-automata 0.1.10",
 ]
->>>>>>> d3797e0 (commit)
 
 [[package]]
 name = "memchr"
@@ -2805,11 +2798,7 @@ dependencies = [
  "futures",
  "libp2p",
  "log",
-<<<<<<< HEAD
- "public-ip",
-=======
  "test-log",
->>>>>>> d3797e0 (commit)
  "tokio",
  "tokio-test",
 ]
