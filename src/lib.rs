@@ -20,7 +20,6 @@ pub mod node {
     };
     use std::{error::Error, time::Duration, collections::HashSet, sync::Arc};
     use tokio::{time::interval, sync::Mutex};
-    use tokio::select;
 
     const GOSSIP_TOPIC: &str = "raggy-chat";
     const GOSSIP_INTERVAL: u64 = 10; // seconds
@@ -251,10 +250,7 @@ pub mod node {
                                                             }
                                                         }
                                                     }
-                                                    QueryResult::GetProviders(_) => {
-                                                        // Ignore provider events - we're not using them
-                                                    }
-                                                    QueryResult::StartProviding(_) => {
+                                                    QueryResult::GetProviders(_) | QueryResult::StartProviding(_) => {
                                                         // Ignore provider events - we're not using them
                                                     }
                                                     QueryResult::Bootstrap(Ok(ok)) => {
@@ -279,22 +275,33 @@ pub mod node {
                                                     QueryResult::GetRecord(Err(e)) => {
                                                         println!("GetRecord query failed: {e:?}");
                                                     }
-                                                    QueryResult::GetProviders(_) | QueryResult::StartProviding(_) => {
-                                                        // Ignore provider errors - we're not using them
-                                                    }
                                                     QueryResult::Bootstrap(Err(e)) => {
                                                         println!("Bootstrap query failed: {e:?}");
                                                     }
                                                     QueryResult::GetClosestPeers(Err(e)) => {
                                                         println!("GetClosestPeers query failed: {e:?}");
                                                     }
-                                                    _ => {}
+                                                    QueryResult::RepublishProvider(_) | QueryResult::PutRecord(_) | QueryResult::RepublishRecord(_) => {
+                                                        // Ignore these events as we don't use them
+                                                    }
                                                 }
                                             }
                                             KademliaEvent::InboundRequest { request } => {
                                                 println!("Received inbound Kademlia request: {request:?}");
                                             }
-                                            _ => {}
+                                            KademliaEvent::UnroutablePeer { peer } => {
+                                                println!("Peer {peer} is unroutable");
+                                            }
+                                            KademliaEvent::RoutablePeer { peer, address } => {
+                                                println!("Peer {peer} is routable at {address}");
+                                                swarm.behaviour_mut().kademlia.add_address(&peer, address);
+                                            }
+                                            KademliaEvent::PendingRoutablePeer { peer, address } => {
+                                                println!("Peer {peer} might be routable at {address}");
+                                            }
+                                            KademliaEvent::ModeChanged { new_mode } => {
+                                                println!("Kademlia mode changed to: {new_mode:?}");
+                                            }
                                         }
                                     }
                                     MyBehaviourEvent::Identify(event) => {
@@ -342,7 +349,6 @@ pub mod node {
                                     MyBehaviourEvent::Ping(event) => {
                                         println!("Ping event: {event:?}");
                                     }
-                                    _ => {}
                                 }
                             }
                             _ => {}

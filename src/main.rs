@@ -372,7 +372,7 @@ pub async fn run_node(
                                                 }
                                             }
                                         }
-                                        QueryResult::GetProviders(Ok(ok)) => {
+                                        QueryResult::GetProviders(Ok(_ok)) => {
                                             // Ignore provider events - we're not using them
                                         }
                                         QueryResult::StartProviding(Ok(_)) => {
