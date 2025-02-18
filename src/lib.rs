@@ -20,6 +20,7 @@ pub mod node {
     };
     use std::{error::Error, time::Duration, collections::HashSet, sync::Arc};
     use tokio::{time::interval, sync::Mutex};
+    use tokio::select;
 
     const GOSSIP_TOPIC: &str = "raggy-chat";
     const GOSSIP_INTERVAL: u64 = 10; // seconds
@@ -189,125 +190,183 @@ pub mod node {
         // Main event loop
         loop {
             tokio::select! {
-                event = swarm.select_next_some() => {
-                    match event {
-                        SwarmEvent::NewListenAddr { address, .. } => {
-                            println!("Listening on {address:?}");
-                            // After we're listening, connect to bootstrap nodes
-                            for addr in &bootstrap_nodes {
-                                let remote: Multiaddr = addr.parse()?;
-                                println!("Dialing bootstrap node: {remote}");
-                                if let Some(Protocol::P2p(hash)) = remote.iter().find(|p| matches!(p, Protocol::P2p(_))) {
-                                    let peer_id = PeerId::from(hash);
-                                    swarm.behaviour_mut().kademlia.add_address(&peer_id, remote.clone());
-                                    swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
-                                }
-                            }
-                            if let Err(e) = swarm.behaviour_mut().kademlia.bootstrap() {
-                                println!("Failed to bootstrap DHT: {e}");
-                            }
-                            if let Err(e) = swarm.behaviour_mut().kademlia.start_providing(record_key.clone()) {
-                                println!("Failed to start providing record: {e}");
-                            }
-                        }
-                        SwarmEvent::Behaviour(event) => {
-                            match event {
-                                MyBehaviourEvent::Kademlia(kad_event) => match kad_event {
-                                    KademliaEvent::RoutingUpdated { peer, .. } => {
-                                        println!("Routing table updated for peer: {peer}");
-                                        swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
-                                    }
-                                    KademliaEvent::OutboundQueryProgressed { result, .. } => {
-                                        match result {
-                                            QueryResult::GetProviders(Ok(ok)) => {
-                                                match ok {
-                                                    libp2p::kad::GetProvidersOk::FoundProviders { providers, .. } => {
-                                                        println!("Found {} providers in DHT", providers.len());
-                                                        for peer in providers {
-                                                            println!("Attempting to connect to provider: {}", peer);
-                                                            swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
-                                                            if let Err(e) = swarm.dial(peer) {
-                                                                println!("Failed to dial peer {}: {}", peer, e);
-                                                            }
-                                                        }
-                                                    }
-                                                    libp2p::kad::GetProvidersOk::FinishedWithNoAdditionalRecord { closest_peers } => {
-                                                        println!("No providers found, but got {} closest peers", closest_peers.len());
-                                                        for peer in closest_peers {
-                                                            println!("Attempting to connect to closest peer: {}", peer);
-                                                            swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
-                                                            if let Err(e) = swarm.dial(peer) {
-                                                                println!("Failed to dial peer {}: {}", peer, e);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            QueryResult::StartProviding(Ok(ok)) => {
-                                                println!("Successfully started providing record: {ok:?}");
-                                            }
-                                            QueryResult::Bootstrap(Ok(ok)) => {
-                                                println!("Bootstrap completed with peer: {}", ok.peer);
-                                                swarm.behaviour_mut().gossipsub.add_explicit_peer(&ok.peer);
-                                            }
-                                            _ => println!("Query progressed: {result:?}"),
-                                        }
-                                    }
-                                    _ => {}
-                                },
-                                MyBehaviourEvent::Identify(event) => {
-                                    println!("Identify event: {event:?}");
-                                    if let identify::Event::Received { peer_id, info, .. } = event {
-                                        for addr in info.listen_addrs {
-                                            swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
-                                        }
+                event = swarm.next() => {
+                    if let Some(event) = event {
+                        match event {
+                            SwarmEvent::NewListenAddr { address, .. } => {
+                                println!("Listening on {address:?}");
+                                // After we're listening, connect to bootstrap nodes
+                                for addr in &bootstrap_nodes {
+                                    let remote: Multiaddr = addr.parse()?;
+                                    println!("Dialing bootstrap node: {remote}");
+                                    if let Some(Protocol::P2p(hash)) = remote.iter().find(|p| matches!(p, Protocol::P2p(_))) {
+                                        let peer_id = PeerId::from(hash);
+                                        swarm.behaviour_mut().kademlia.add_address(&peer_id, remote.clone());
                                         swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                                     }
                                 }
-                                MyBehaviourEvent::Mdns(event) => {
-                                    match event {
-                                        mdns::Event::Discovered(list) => {
-                                            for (peer_id, multiaddr) in list {
-                                                println!("mDNS discovered a new peer: {peer_id}");
-                                                swarm.behaviour_mut().kademlia.add_address(&peer_id, multiaddr);
-                                                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
-                                            }
-                                        }
-                                        mdns::Event::Expired(list) => {
-                                            for (peer_id, _multiaddr) in list {
-                                                println!("mDNS discover peer has expired: {peer_id}");
-                                            }
-                                        }
-                                    }
+                                if let Err(e) = swarm.behaviour_mut().kademlia.bootstrap() {
+                                    println!("Failed to bootstrap DHT: {e}");
                                 }
-                                MyBehaviourEvent::Gossipsub(gossip_event) => {
-                                    if let gossipsub::Event::Message {
-                                        propagation_source: peer_id,
-                                        message_id: id,
-                                        message,
-                                    } = gossip_event
-                                    {
-                                        let msg_str = String::from_utf8_lossy(&message.data).to_string();
-                                        println!(
-                                            "Got message: '{}' with id: {} from peer: {:?}",
-                                            msg_str,
-                                            id,
-                                            peer_id
-                                        );
-                                        message_callback.lock().await.insert(msg_str);
-                                    }
-                                }
-                                MyBehaviourEvent::Ping(event) => {
-                                    println!("Ping event: {event:?}");
+                                if let Err(e) = swarm.behaviour_mut().kademlia.start_providing(record_key.clone()) {
+                                    println!("Failed to start providing record: {e}");
                                 }
                             }
+                            SwarmEvent::Behaviour(event) => {
+                                match event {
+                                    MyBehaviourEvent::Kademlia(event) => {
+                                        match event {
+                                            KademliaEvent::RoutingUpdated { peer, .. } => {
+                                                println!("Routing table updated for peer: {peer}");
+                                                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
+                                            }
+                                            KademliaEvent::OutboundQueryProgressed { result, .. } => {
+                                                match result {
+                                                    QueryResult::GetRecord(Ok(ok)) => {
+                                                        println!("GetRecord query completed");
+                                                        match ok {
+                                                            libp2p::kad::GetRecordOk::FoundRecord(record) => {
+                                                                // Parse the multiaddresses from the record
+                                                                if let Ok(addresses_str) = String::from_utf8(record.record.value) {
+                                                                    for addr_str in addresses_str.split(',') {
+                                                                        if let Ok(addr) = addr_str.parse::<Multiaddr>() {
+                                                                            // Extract peer ID from the address if present
+                                                                            if let Some(Protocol::P2p(hash)) = addr.iter().find(|p| matches!(p, Protocol::P2p(_))) {
+                                                                                let peer_id = PeerId::from(hash);
+                                                                                if peer_id != local_peer_id {  // Don't dial ourselves
+                                                                                    println!("Found peer address in DHT: {}", addr);
+                                                                                    swarm.behaviour_mut().kademlia.add_address(&peer_id, addr.clone());
+                                                                                    swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                                                                                    if let Err(e) = swarm.dial(addr.clone()) {
+                                                                                        println!("Failed to dial address {}: {}", addr, e);
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            libp2p::kad::GetRecordOk::FinishedWithNoAdditionalRecord { .. } => {
+                                                                println!("No additional records found");
+                                                            }
+                                                        }
+                                                    }
+                                                    QueryResult::GetProviders(_) => {
+                                                        // Ignore provider events - we're not using them
+                                                    }
+                                                    QueryResult::StartProviding(_) => {
+                                                        // Ignore provider events - we're not using them
+                                                    }
+                                                    QueryResult::Bootstrap(Ok(ok)) => {
+                                                        println!("Bootstrap completed with peer: {}", ok.peer);
+                                                        swarm.behaviour_mut().gossipsub.add_explicit_peer(&ok.peer);
+                                                        // After bootstrap, get the peer's addresses
+                                                        let key = RecordKey::new(&format!("/raggy/peers/{}", ok.peer));
+                                                        swarm.behaviour_mut().kademlia.get_record(key);
+                                                    }
+                                                    QueryResult::GetClosestPeers(Ok(ok)) => {
+                                                        println!("GetClosestPeers query completed");
+                                                        for peer in ok.peers {
+                                                            if peer != local_peer_id {  // Don't dial ourselves
+                                                                println!("Found close peer: {}", peer);
+                                                                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
+                                                                // Get the peer's addresses from DHT
+                                                                let key = RecordKey::new(&format!("/raggy/peers/{}", peer));
+                                                                swarm.behaviour_mut().kademlia.get_record(key);
+                                                            }
+                                                        }
+                                                    }
+                                                    QueryResult::GetRecord(Err(e)) => {
+                                                        println!("GetRecord query failed: {e:?}");
+                                                    }
+                                                    QueryResult::GetProviders(_) | QueryResult::StartProviding(_) => {
+                                                        // Ignore provider errors - we're not using them
+                                                    }
+                                                    QueryResult::Bootstrap(Err(e)) => {
+                                                        println!("Bootstrap query failed: {e:?}");
+                                                    }
+                                                    QueryResult::GetClosestPeers(Err(e)) => {
+                                                        println!("GetClosestPeers query failed: {e:?}");
+                                                    }
+                                                    _ => {}
+                                                }
+                                            }
+                                            KademliaEvent::InboundRequest { request } => {
+                                                println!("Received inbound Kademlia request: {request:?}");
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                    MyBehaviourEvent::Identify(event) => {
+                                        println!("Identify event: {event:?}");
+                                        if let identify::Event::Received { peer_id, info, .. } = event {
+                                            for addr in info.listen_addrs {
+                                                swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
+                                            }
+                                            swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                                        }
+                                    }
+                                    MyBehaviourEvent::Mdns(event) => {
+                                        match event {
+                                            mdns::Event::Discovered(list) => {
+                                                for (peer_id, multiaddr) in list {
+                                                    println!("mDNS discovered a new peer: {peer_id}");
+                                                    swarm.behaviour_mut().kademlia.add_address(&peer_id, multiaddr);
+                                                    swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                                                }
+                                            }
+                                            mdns::Event::Expired(list) => {
+                                                for (peer_id, _multiaddr) in list {
+                                                    println!("mDNS discover peer has expired: {peer_id}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    MyBehaviourEvent::Gossipsub(gossip_event) => {
+                                        if let gossipsub::Event::Message {
+                                            propagation_source: peer_id,
+                                            message_id: id,
+                                            message,
+                                        } = gossip_event
+                                        {
+                                            let msg_str = String::from_utf8_lossy(&message.data).to_string();
+                                            println!(
+                                                "Got message: '{}' with id: {} from peer: {:?}",
+                                                msg_str,
+                                                id,
+                                                peer_id
+                                            );
+                                            message_callback.lock().await.insert(msg_str);
+                                        }
+                                    }
+                                    MyBehaviourEvent::Ping(event) => {
+                                        println!("Ping event: {event:?}");
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
                 _ = search_interval.tick() => {
                     println!("Searching for peers in DHT...");
-                    swarm.behaviour_mut().kademlia.get_providers(record_key.clone());
+                    // Get addresses of all known peers from the DHT
+                    let peers: Vec<_> = swarm.behaviour_mut().kademlia.kbuckets()
+                        .into_iter()
+                        .flat_map(|bucket| {
+                            bucket.iter()
+                                .filter(|entry| entry.node.key.preimage() != &local_peer_id)
+                                .map(|entry| entry.node.key.preimage().clone())
+                                .collect::<Vec<_>>()
+                        })
+                        .collect();
+                    
+                    // Now we can modify the swarm
+                    for peer in peers {
+                        let key = RecordKey::new(&format!("/raggy/peers/{}", peer));
+                        swarm.behaviour_mut().kademlia.get_record(key);
+                    }
                 }
                 _ = broadcast_interval.tick() => {
                     let message = format!("HELO FROM {}", cli.name);
